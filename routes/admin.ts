@@ -1,0 +1,15 @@
+import express from "express";
+
+import AdminController_View from "../controllers/admin_controller/AdminView";
+import AdminController_Post from "../controllers/admin_controller/AdminPost";
+
+import authenticateJWT from "../middlewares/authenticateJWT";
+import verifyPermissions from "../middlewares/verifyPermissions";
+
+const admin = express.Router();
+
+admin.get('/create-cards', verifyPermissions("Admin"), authenticateJWT, AdminController_View.CreateCardsView);
+
+admin.post('/add-card', verifyPermissions("Admin"), authenticateJWT, AdminController_Post.CreateCardPost);
+
+export default admin;
