@@ -8,6 +8,7 @@ import {Schema} from "mongoose";
 interface UserData {
     id: string;
     name: string;
+    lvl: number;
 }
 
 interface BasicData {
@@ -35,13 +36,11 @@ class PostController {
             const newGame = await GamesModel.create({
                 game_key: crypto.randomUUID(),
                 game_type: game_type || "player_bot",
-                game_online: {
-                    max_online: 2,
-                    online: 0
-                },
+                game_online: { max_online: 2 },
                 users_battle_info: [{
                     _id: user_info.id as UserData,
                     user_name: user_info.name as UserData,
+                    user_lvl: user_info.lvl as UserData,
                     user_cards: {
                         battle_cards: [],
                         select_card: ""
@@ -61,7 +60,7 @@ class PostController {
             return res.status(200).json({
                 success: "Новая игра успешно создана!",
                 game_type: game_type,
-                game_id: newGame.game_key
+                game_key: newGame.game_key
             });
         } catch (err) {
             console.error('Ошибка:', err);

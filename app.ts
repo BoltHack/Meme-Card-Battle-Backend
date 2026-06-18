@@ -5,7 +5,7 @@ import logger from "morgan";
 import cors from "cors";
 import http from "http";
 import fileUpload from "express-fileupload";
-import { Server } from "socket.io";
+import {Server, Socket} from "socket.io";
 
 import indexRouter from "./routes/index.ts";
 import authRouter from "./routes/auth";
@@ -16,7 +16,10 @@ import cookiesData from "./app_data/cookiesData";
 import { BOT_mode } from "./controllers/bots_controller/BOT_easyMode";
 import { start } from "./services/db";
 import { GAME } from "./controllers/game_controller/game";
-import fileUpload from "express-fileupload";
+// import fileUpload from "express-fileupload";
+
+import UsersModel from "./models/UsersModel";
+import GamesModel from "./models/GamesModel";
 
 const serverPort = process.env.PORT;
 
@@ -30,21 +33,165 @@ export const io = new Server(server, {
     }
 });
 
+interface SocketData extends Socket {
+    playerId?: string;
+}
+
+interface UserData {
+    id: string;
+    name: string;
+    lvl: number;
+}
+
+interface UserMongooseData {
+    isOnline: boolean;
+    gameInfo: string;
+}
+
+const clients: Record<string, string> = {};
+
 io.on("connection", async (socket) => {
-    console.log(`Пользователь ${socket.id} подключился.`);
+    console.log(`Пользователь ${socket.id} подключился к дефолтному сокету.`);
+
+    socket.on("user_register", async (data) => {
+        const { player_id } = data;
+        try {
+            const user_info = await UsersModel.findById(player_id);
+
+            if (!user_info) return;
+
+            (socket as SocketData).playerId = player_id;
+            clients[player_id] = socket.id;
+
+            setTimeout(async () => {
+                if (clients[player_id] === socket.id) {
+                    console.log(`${player_id} в сети.`);
+                    user_info.isOnline = true;
+                    await user_info.save();
+                }
+            }, 3000);
+        } catch (err) {
+            console.log('err', err);
+        }
+    });
+
+    socket.on("search_game", async (data) => {
+        const { player_id } = data;
+        try {
+            const user_info = await UsersModel.findByIdAndUpdate(
+                player_id,
+                { $set: { gameInfo: "Search" } },
+                { new: true }
+            );
+
+            if (!user_info) return;
+
+            const matched_user = await UsersModel.findOneAndUpdate(
+                {
+                    _id: { $ne: player_id },
+                    isOnline: true,
+                    gameInfo: "Search"
+                },
+                { $set: { gameInfo: "InGame" } },
+                { new: true }
+            );
+
+            if (matched_user) {
+                await UsersModel.updateOne(
+                    { _id: player_id },
+                    { $set: { gameInfo: "InGame" } }
+                );
+
+                const newGame = await GamesModel.create({
+                    game_key: crypto.randomUUID(),
+                    game_type: "player_player",
+                    game_online: { max_online: 2 },
+                    users_battle_info: [
+                        {
+                            _id: user_info.id as UserData,
+                            user_name: user_info.name as UserData,
+                            user_lvl: user_info.lvl as UserData,
+                            user_cards: {
+                                battle_cards: [],
+                                select_card: ""
+                            }
+                        },
+                        {
+                            _id: matched_user.id as UserData,
+                            user_name: matched_user.name as UserData,
+                            user_lvl: matched_user.lvl as UserData,
+                            user_cards: {
+                                battle_cards: [],
+                                select_card: ""
+                            }
+                        }
+                    ],
+                    bot_battle_info: [{
+                        bot_mode: "",
+                        bot_id: crypto.randomUUID(),
+                        bot_name: "",
+                        bot_cards: {
+                            battle_cards: [],
+                            select_card: ""
+                        },
+                    }]
+                });
+
+                const matched_socket_id = clients[matched_user.id];
+
+                console.log(`Матч создан между ${player_id} и ${matched_user._id}`);
+
+                const game_key = newGame.game_key;
+
+                if (matched_socket_id) {
+                    socket.emit("found_game", { game_key: game_key });
+
+                    io.to(matched_socket_id).emit("found_game", { game_key: game_key });
+                } else {
+                    console.log(`Критическая ситуация: сокет для игрока ${matched_user.id} не найден!`);
+                }
+            } else {
+                console.log('Игрок не найден.');
+            }
+
+        } catch (err) {
+            console.log('err', err);
+        }
+    });
 
     let isBotActive = false;
 
-    socket.on("bot_activate", () => {
-        if (isBotActive) return;
+    socket.on("game_start", async (type) => {
+        if (type === "player_bot") {
+            if (isBotActive) return;
 
-        isBotActive = true;
-        BOT_mode(socket);
-        GAME(socket);
+            isBotActive = true;
+            BOT_mode(socket);
+            GAME(socket);
+        } else if (type === "player_player") {
+            GAME(socket);
+        } else {
+            console.log("Ошибка ввода.")
+        }
     });
 
-    socket.on("disconnect", () => {
-        console.log(`Пользователь ${socket.id} отключился.`);
+    socket.on("disconnect", async () => {
+        console.log(`Пользователь ${socket.id} отключился от дефолтного сокета.`);
+
+        const player_id = (socket as SocketData).playerId;
+
+        const user_info = await UsersModel.findById(player_id);
+
+        if (!user_info) return;
+
+        setTimeout(async () => {
+            if (clients[player_id] === socket.id) {
+                console.log(`${player_id} не в сети.`);
+                user_info.isOnline = false;
+                user_info.gameInfo = "Default";
+                await user_info.save();
+            }
+        }, 3000);
     });
 });
 

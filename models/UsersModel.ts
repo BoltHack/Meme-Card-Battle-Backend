@@ -57,6 +57,8 @@ const UsersSchema = new Schema({
         type: String,
         default: ""
     },
+    isOnline: { type: Boolean },
+    gameInfo: { type: String, default: "Default" },
     refreshTokenHash: {
         type: String,
         default: null

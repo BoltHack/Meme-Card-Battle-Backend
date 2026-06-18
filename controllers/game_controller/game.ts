@@ -5,8 +5,60 @@ import UsersModel from "../../models/UsersModel";
 import CardsModel from "../../models/CardsModel";
 import GamesModel from "../../models/GamesModel";
 
+interface SocketData extends Socket {
+    playerId?: string;
+    gameId?: string;
+}
+
+interface UserData {
+    _id: string;
+    game_key: string;
+    player_id: string;
+}
+
+interface UserMongooseData {
+    isOnline: boolean;
+    gameInfo: string;
+    myCards: object;
+}
 
 export const GAME = async (socket: Socket) => {
+
+    let isCardSelected = null;
+    console.log(`Пользователь ${socket.id} подключился к игре.`);
+
+    socket.on("join_game", async (data) => {
+        const { game_key, player_id } = data;
+        try {
+            const game_info = await GamesModel.findOne({ game_key: game_key });
+            if (!game_info) {
+                console.log("Игра не найдена.");
+                return;
+            }
+            const game_id = game_info._id as UserData;
+            // socket.playerId = player_id;
+            // socket.gameId = game_id;
+
+            let updatedGame = await GamesModel.findOneAndUpdate(
+                { _id: game_id },
+                { $addToSet: { 'game_online.users': player_id } },
+                { new: true }
+            );
+
+            if (!updatedGame) {
+                console.log("Игра не найдена.");
+                socket.emit("error", { message: "Игра не найдена" });
+                return;
+            }
+
+            (socket as SocketData).playerId = player_id;
+            (socket as SocketData).gameId = updatedGame._id.toString();
+
+            console.log(`Игрок ${player_id} успешно добавлен в игру ${updatedGame._id}`);
+        } catch (err) {
+            console.log('err', err);
+        }
+    });
     async function get_cards_func(arr) {
         const ids = arr.map(c => c.card_id.toString());
 
@@ -35,19 +87,17 @@ export const GAME = async (socket: Socket) => {
         });
     }
 
-    console.log(`Пользователь ${socket.id} подключился к игре.`);
-
     socket.on("get_user_cards", async (data) => {
         const { player_id } = data;
         try {
-            const player = await UsersModel.findById(player_id);
+            console.log('get_user_cards...');
+            // const player_id = (socket as SocketData).playerId;
 
-            // player.myCards.push({card_id: '6a12e70c8f6a53efa1f7232c'});
-            // player.myCards.push({card_id: '6a12e74bb8af6241f98900a7'});
-            //
-            // await player.save();
+            const player_info = await UsersModel.findById(player_id);
 
-            const player_cards = player.myCards;
+            if (!player_info) return;
+
+            const player_cards = player_info.myCards as UserMongooseData;
 
             await get_cards_func(player_cards);
         } catch (err) {
@@ -224,12 +274,51 @@ export const GAME = async (socket: Socket) => {
                 return;
             }
 
+            if (isCardSelected !== null) {
+                socket.emit("error_handler", "Вы уже выбрали карту.");
+                return;
+            }
+
             const card_to_change = game_find_player.user_cards.battle_cards[cardIndex].card_id;
 
             game_find_player.user_cards.select_card = card_to_change;
             game_find_player.user_cards.battle_cards.splice(cardIndex, 1);
+            isCardSelected = card_to_change.toString();
 
             await game_info.save();
+        } catch (err) {
+            console.log('err', err);
+        }
+    });
+
+    socket.on("disconnect", async () => {
+        try {
+            const player_id = (socket as SocketData).playerId;
+            const game_id = (socket as SocketData).gameId;
+
+            const user_info = await UsersModel.findById(player_id);
+            const game_info = await GamesModel.findById(game_id);
+
+            if (!game_info || !user_info) {
+                console.log("Игра не найдена.");
+                return;
+            }
+
+            let updatedGame = await GamesModel.findOneAndUpdate(
+                { _id: game_id },
+                { $pull: { 'game_online.users': player_id } },
+                { new: true }
+            );
+
+            user_info.gameInfo = "Default";
+            await user_info.save();
+
+            if (!updatedGame) {
+                console.log(`Игра ${game_id} не найдена при отключении игрока.`);
+                return;
+            }
+
+            console.log(`Игрок ${player_id} вышел из игры ${game_id}`);
         } catch (err) {
             console.log('err', err);
         }

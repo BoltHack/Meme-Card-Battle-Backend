@@ -14,14 +14,12 @@ const GamesSchema = new Schema({
         }],
         max_online: {
             type: Number
-        },
-        online: {
-            type: Number
         }
     },
     users_battle_info: [{
         user_id: { type: Schema.Types.ObjectId, ref: 'User' },
         user_name: { type: String },
+        user_lvl: { type: Number },
         user_health: { type: Number, default: 100 },
         user_ult: { type: Number, default: 0 },
         user_cards: {
