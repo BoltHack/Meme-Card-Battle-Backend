@@ -69,6 +69,21 @@ class ViewController {
         }
     }
 
+    static TermsOfUseView = async (req: CustomRequest, res: Response, next: NextFunction) => {
+        try {
+            const user = req.user as UserData;
+            res.json({
+                id: user.id,
+                name: user.name,
+                locale: req.basicData?.locale
+            });
+        } catch (err) {
+            console.error('Ошибка:', err);
+            const errorMessage = err instanceof Error ? err.message : 'Неизвестная ошибка';
+            return res.status(500).json({ error: errorMessage });
+        }
+    }
+
     static GameSettingsView = async (req: CustomRequest, res: Response, next: NextFunction) => {
         try {
             const user = req.user as UserData;
@@ -104,7 +119,11 @@ class ViewController {
             const player_info = game.users_battle_info.find(u => u._id.toString() === user.id) as UserMongooseData;
             const enemy_info = game.users_battle_info.find(u => u._id.toString() !== user.id) as UserMongooseData;
 
-            if (!player_info || !enemy_info) {
+            if (
+                game_type === "player_player" && !player_info ||
+                game_type === "player_player" && !enemy_info ||
+                game_type === "player_bot" && !player_info
+            ) {
                 return res.status(404).json({ error: errorMsg });
             }
 

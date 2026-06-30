@@ -3,6 +3,7 @@ import path from "path";
 import cookieParser from "cookie-parser";
 import logger from "morgan";
 import cors from "cors";
+import crypto from "crypto"
 import http from "http";
 import fileUpload from "express-fileupload";
 import {Server, Socket} from "socket.io";
@@ -38,6 +39,7 @@ interface SocketData extends Socket {
 }
 
 interface UserData {
+    _id: string;
     id: string;
     name: string;
     lvl: number;
@@ -49,6 +51,115 @@ interface UserMongooseData {
 }
 
 const clients: Record<string, string> = {};
+
+
+function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function gameFountTimer(socket, player_id) {
+    const user_info = await UsersModel.findByIdAndUpdate(
+        player_id,
+        { $set: { gameInfo: "Search" } },
+        { new: true }
+    );
+
+    if (!user_info) return;
+
+    let isGameFound = false;
+    let isSearchCanceled = false;
+
+    for (let i = 0; i <= 800; i++) {
+        console.log('i', i);
+
+        const current_user_info = await UsersModel.findById(player_id);
+        if (!current_user_info || current_user_info.gameInfo !== "Search") {
+            isSearchCanceled = true;
+            console.log('Отмена.');
+            break;
+        }
+
+        const matched_user = await UsersModel.findOneAndUpdate(
+            {
+                _id: { $ne: player_id },
+                isOnline: true,
+                gameInfo: "Search"
+            },
+            { $set: { gameInfo: "InGame" } },
+            { new: true }
+        );
+
+        if (matched_user) {
+            await UsersModel.updateOne(
+                { _id: player_id },
+                { $set: { gameInfo: "InGame" } }
+            );
+
+            const newGame = await GamesModel.create({
+                game_key: crypto.randomUUID(),
+                game_type: "player_player",
+                game_online: { max_online: 2 },
+                users_battle_info: [
+                    {
+                        _id: user_info._id as any,
+                        user_name: user_info.name as any,
+                        user_lvl: user_info.lvl as any,
+                        user_cards: {
+                            battle_cards: [],
+                            select_card: ""
+                        }
+                    },
+                    {
+                        _id: matched_user._id as any,
+                        user_name: matched_user.name as any,
+                        user_lvl: matched_user.lvl as any,
+                        user_cards: {
+                            battle_cards: [],
+                            select_card: ""
+                        }
+                    }
+                ],
+                bot_battle_info: [{
+                    bot_mode: "",
+                    bot_id: crypto.randomUUID(),
+                    bot_name: "",
+                    bot_cards: {
+                        battle_cards: [],
+                        select_card: ""
+                    },
+                }]
+            });
+
+            const matched_socket_id = clients[matched_user.id];
+
+            console.log(`Матч создан между ${player_id} и ${matched_user._id}`);
+
+            const game_key = newGame.game_key;
+
+            if (matched_socket_id) {
+                socket.emit("found_game", { game_key: game_key });
+
+                io.to(matched_socket_id).emit("found_game", { game_key: game_key });
+            } else {
+                console.log(`Критическая ситуация: сокет для игрока ${matched_user.id} не найден!`);
+            }
+
+            isGameFound = true;
+            break;
+        } else {
+            console.log('Игрок не найден, продолжаем поиск...');
+        }
+        await delay(5000);
+    }
+    if (!isGameFound && !isSearchCanceled) {
+        console.log('В результате поиска никого не было найдено.');
+        await UsersModel.updateOne(
+            { _id: player_id },
+            { $set: { gameInfo: "Default" } }
+        );
+        socket.emit("error", "game_not_found");
+    }
+}
 
 io.on("connection", async (socket) => {
     console.log(`Пользователь ${socket.id} подключился к дефолтному сокету.`);
@@ -66,8 +177,8 @@ io.on("connection", async (socket) => {
             setTimeout(async () => {
                 if (clients[player_id] === socket.id) {
                     console.log(`${player_id} в сети.`);
-                    user_info.isOnline = true;
-                    await user_info.save();
+                    user_info.isOnline = true as UserMongooseData;
+                    await user_info.save() as UserMongooseData;
                 }
             }, 3000);
         } catch (err) {
@@ -76,92 +187,29 @@ io.on("connection", async (socket) => {
     });
 
     socket.on("search_game", async (data) => {
-        const { player_id } = data;
+        const { type, player_id } = data;
         try {
-            const user_info = await UsersModel.findByIdAndUpdate(
-                player_id,
-                { $set: { gameInfo: "Search" } },
-                { new: true }
-            );
+            const user_info = await UsersModel.findById(player_id);
+            const game_type = Boolean(type);
 
             if (!user_info) return;
 
-            const matched_user = await UsersModel.findOneAndUpdate(
-                {
-                    _id: { $ne: player_id },
-                    isOnline: true,
-                    gameInfo: "Search"
-                },
-                { $set: { gameInfo: "InGame" } },
-                { new: true }
-            );
-
-            if (matched_user) {
-                await UsersModel.updateOne(
-                    { _id: player_id },
-                    { $set: { gameInfo: "InGame" } }
-                );
-
-                const newGame = await GamesModel.create({
-                    game_key: crypto.randomUUID(),
-                    game_type: "player_player",
-                    game_online: { max_online: 2 },
-                    users_battle_info: [
-                        {
-                            _id: user_info.id as UserData,
-                            user_name: user_info.name as UserData,
-                            user_lvl: user_info.lvl as UserData,
-                            user_cards: {
-                                battle_cards: [],
-                                select_card: ""
-                            }
-                        },
-                        {
-                            _id: matched_user.id as UserData,
-                            user_name: matched_user.name as UserData,
-                            user_lvl: matched_user.lvl as UserData,
-                            user_cards: {
-                                battle_cards: [],
-                                select_card: ""
-                            }
-                        }
-                    ],
-                    bot_battle_info: [{
-                        bot_mode: "",
-                        bot_id: crypto.randomUUID(),
-                        bot_name: "",
-                        bot_cards: {
-                            battle_cards: [],
-                            select_card: ""
-                        },
-                    }]
-                });
-
-                const matched_socket_id = clients[matched_user.id];
-
-                console.log(`Матч создан между ${player_id} и ${matched_user._id}`);
-
-                const game_key = newGame.game_key;
-
-                if (matched_socket_id) {
-                    socket.emit("found_game", { game_key: game_key });
-
-                    io.to(matched_socket_id).emit("found_game", { game_key: game_key });
-                } else {
-                    console.log(`Критическая ситуация: сокет для игрока ${matched_user.id} не найден!`);
-                }
+            if (game_type) {
+                await gameFountTimer(socket, player_id);
+            } else if (!game_type) {
+                user_info.gameInfo = "Default";
+                await user_info.save();
             } else {
-                console.log('Игрок не найден.');
+                console.log('error');
             }
-
         } catch (err) {
             console.log('err', err);
         }
     });
 
-    let isBotActive = false;
-
     socket.on("game_start", async (type) => {
+        let isBotActive = false;
+
         if (type === "player_bot") {
             if (isBotActive) return;
 

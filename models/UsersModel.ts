@@ -21,62 +21,31 @@ import { Schema, model, InferSchemaType } from "mongoose";
 // }, { _id: false });
 
 const UsersSchema = new Schema({
-    name: {
-        type: String,
-        required: true
-    },
-    lvl: {
-        type: Number,
-        default: 0
-    },
-    requestName: {
-        type: String,
-        required: true
-    },
-    email: {
-        type: String,
-        required: true
-    },
-    password: {
-        type: String,
-        required: true
-    },
-    image: {
-        type: String,
-        default: ""
-    },
-    myCards: [{
-        // card_id: { type: Schema.Types.ObjectId },
-        card_id: { type: String },
-    }],
-    role: {
-        type: String,
-        default: "User"
-    },
-    ip: {
-        type: String,
-        default: ""
-    },
+    name: { type: String, required: true },
+    requestName: { type: String, required: true, unique: true },
+    email: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    image: { type: String, default: "" },
+    role: { type: String, default: "User" },
+    ip: { type: String, default: "" },
+
+    coins: { type: Number, default: 0 },
+    money: { type: Number, default: 0 },
+    lvl: { type: Number, default: 0 },
+
+    myCards: [{ card_id: { type: String } }],
+
     isOnline: { type: Boolean },
     gameInfo: { type: String, default: "Default" },
-    refreshTokenHash: {
-        type: String,
-        default: null
-    },
-    tokenVersion: {
-        type: Number,
-        default: 0
-    },
-    createdAt: {
-        type: Date,
-        default: Date.now,
-    },
-    expiresAt: {
-        type: Date,
-    },
+
+    refreshTokenHash: { type: String, default: null },
+    tokenVersion: { type: Number, default: 0 },
+
+    createdAt: { type: Date, default: Date.now },
+    // expiresAt: { type: Date }
 });
 
-UsersSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+// UsersSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 export type IUser = InferSchemaType<typeof UsersSchema>;
 

@@ -9,6 +9,9 @@ const router = express.Router();
 
 router.get('/', ViewController.MainView);
 router.get('/how-to-play', authenticateJWT, ViewController.HowToPlayView);
+
+router.get('/terms-of-use', authenticateJWT, ViewController.TermsOfUseView)
+
 router.get('/bot-settings', authenticateJWT, ViewController.BotSettingsView);
 router.get('/game-settings', authenticateJWT, ViewController.GameSettingsView);
 // router.get('/game/:adversary', authenticateJWT, ViewController.GameView);

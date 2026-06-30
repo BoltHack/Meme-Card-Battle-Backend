@@ -20,12 +20,9 @@ function verifyPermissions(role: string) {
         if (!req.cookies['locale']) {
             res.cookie('locale', locale, { httpOnly: true, maxAge: 10 * 365 * 24 * 60 * 60 * 1000 });
         }
-        // const errorPageLocale = locale === 'en' ? 'en/error' : 'ru/error';
-        // const errorMsg = locale === 'en' ? 'Not Found' : 'Страница не найдена.';
 
         if (!accessToken) {
-            // return res.render(errorPageLocale, { code: '404', message: errorMsg });
-            return res.status(401).json({ error: 'auth error.' });
+            return res.status(404).json({ error: 'not found.' });
         }
 
         let decoded: unknown;
@@ -34,17 +31,17 @@ function verifyPermissions(role: string) {
             decoded = jwt.verify(accessToken, accessTokenSecret) as UserData;
         } catch (err) {
             console.log(err)
-            return res.status(401).json({ error: 'auth error.' });
+            return res.status(404).json({ error: 'not found.' });
         }
 
         if (!decoded || typeof decoded !== 'object' || !('role' in decoded)) {
-            return res.status(401).json({ error: 'auth error.' });
+            return res.status(404).json({ error: 'not found.' });
         }
 
         const userData = decoded as UserData;
 
         if (!userData.role || userData.role !== role) {
-            return res.status(401).json({ error: 'auth error.' });
+            return res.status(404).json({ error: 'not found.' });
         }
 
         req.user = userData;
