@@ -189,14 +189,26 @@ io.on("connection", async (socket) => {
     socket.on("search_game", async (data) => {
         const { type, player_id } = data;
         try {
+            console.log('Searching game...');
             const user_info = await UsersModel.findById(player_id);
             const game_type = Boolean(type);
 
             if (!user_info) return;
 
             if (game_type) {
+
+                if (user_info.gameInfo === "InGame") {
+                    socket.emit("error", "InGame_error");
+                    return;
+                }
+
                 await gameFountTimer(socket, player_id);
             } else if (!game_type) {
+                const playerRoom = `game:${player_id}`;
+                const activeSockets = await io.in(playerRoom).fetchSockets();
+
+                if (activeSockets.length > 0 && activeSockets[0].rooms.has(`game:${player_id}`)) return;
+
                 user_info.gameInfo = "Default";
                 await user_info.save();
             } else {
@@ -231,6 +243,11 @@ io.on("connection", async (socket) => {
         const user_info = await UsersModel.findById(player_id);
 
         if (!user_info) return;
+
+        const playerRoom = `game:${player_id}`;
+        const activeSockets = await io.in(playerRoom).fetchSockets();
+
+        if (activeSockets.length > 0 && activeSockets[0].rooms.has(`game:${player_id}`)) return;
 
         setTimeout(async () => {
             if (clients[player_id] === socket.id) {

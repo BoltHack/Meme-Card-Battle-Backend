@@ -10,7 +10,6 @@ interface UserData {
     name: string;
     lvl: number;
 }
-
 interface BasicData {
     locale: string;
 }
@@ -56,6 +55,9 @@ class PostController {
                     },
                 }]
             });
+
+            user_info.gameInfo = "InGame";
+            user_info.save();
 
             return res.status(200).json({
                 success: "Новая игра успешно создана!",

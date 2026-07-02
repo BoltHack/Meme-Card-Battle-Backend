@@ -36,8 +36,6 @@ export const GAME = async (socket: Socket) => {
                 return;
             }
             const game_id = game_info._id as UserData;
-            // socket.playerId = player_id;
-            // socket.gameId = game_id;
 
             let updatedGame = await GamesModel.findOneAndUpdate(
                 { _id: game_id },
@@ -55,10 +53,14 @@ export const GAME = async (socket: Socket) => {
             (socket as SocketData).gameId = updatedGame._id.toString();
 
             console.log(`Игрок ${player_id} успешно добавлен в игру ${updatedGame._id}`);
+
+            const playerRoom = `game:${player_id}`;
+            socket.join(playerRoom);
         } catch (err) {
             console.log('err', err);
         }
     });
+
     async function get_cards_func(arr) {
         const ids = arr.map(c => c.card_id.toString());
 
@@ -309,6 +311,9 @@ export const GAME = async (socket: Socket) => {
                 { $pull: { 'game_online.users': player_id } },
                 { new: true }
             );
+
+            const playerRoom = `game:${player_id}`;
+            socket.leave(playerRoom);
 
             user_info.gameInfo = "Default";
             await user_info.save();
