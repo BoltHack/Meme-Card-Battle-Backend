@@ -26,7 +26,8 @@ const GamesSchema = new Schema({
             battle_cards: [{
                 _id: false,
                 card_id: { type: Schema.Types.ObjectId, ref: 'Cards' },
-                user_base_card_id: { type: Schema.Types.ObjectId }
+                user_base_card_id: { type: Schema.Types.ObjectId },
+                // user_base_card_id: { type: String }
             }],
             select_card: {
                 type: String

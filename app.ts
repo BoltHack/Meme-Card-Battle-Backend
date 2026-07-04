@@ -189,7 +189,7 @@ io.on("connection", async (socket) => {
     socket.on("search_game", async (data) => {
         const { type, player_id } = data;
         try {
-            console.log('Searching game...');
+            console.log('Режим поиска игры:', type);
             const user_info = await UsersModel.findById(player_id);
             const game_type = Boolean(type);
 

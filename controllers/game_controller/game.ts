@@ -1,5 +1,6 @@
 // import { mongoose, Types } from "mongoose";
 import { Socket } from "socket.io";
+const mongoose = require('mongoose');
 
 import UsersModel from "../../models/UsersModel";
 import CardsModel from "../../models/CardsModel";
@@ -66,23 +67,49 @@ export const GAME = async (socket: Socket) => {
 
         const player_cards = await CardsModel.find({ _id: { $in: ids } });
 
-        const formattedCardsArray = player_cards.map(cards => {
-            const cardIdStr = cards._id.toString();
+        const formattedCardsArray = player_cards.flatMap(card => {
+            const isRandom = arr.find(c => c.card_id.toString() === card._id.toString());
+            const count = isRandom.quantity || 1;
 
-            const isRandom = arr.find(c => c.card_id.toString() === cardIdStr.toString());
+            // console.log('isRandom', isRandom);
+            // console.log('card', card);
 
-            return {
-                menu_id: isRandom._id,
-                id: cards._id,
-                name: cards.card_name,
-                description: cards.card_description,
-                avatar: cards.card_avatar,
-                lvl: cards.card_lvl_info?.lvl_number || 1,
-                rarity: cards.card_lvl_info?.lvl_name || 'Default',
-                damage: cards.card_stats?.card_damage || 0,
-                protection: cards.card_stats?.card_protection || 0
-            }
+            return Array.from({ length: count }, (_, index) => ({
+                menu_id: new mongoose.Types.ObjectId(),
+                quantity: isRandom.quantity,
+                id: isRandom.card_id,
+                name: card.card_name,
+                description: card.card_description || "",
+                avatar: card.card_avatar,
+                lvl: card.card_lvl_info?.lvl_number || 1,
+                rarity: card.card_lvl_info?.lvl_name || "Default",
+                damage: card.card_stats?.card_damage || 0,
+                protection: card.card_stats?.card_protection || 0
+            }));
+
         });
+
+        // const formattedCardsArray = player_cards.map(cards => {
+        //     const cardIdStr = cards._id.toString();
+        //     const randomId = new mongoose.Types.ObjectId();
+        //
+        //     const isRandom = arr.find(c => c.card_id.toString() === cardIdStr.toString());
+        //     // const isQuantity = arr.find(c => c.card_id.toString() === cardIdStr.toString() ? c.quantity : null);
+        //     // console.log('isRandom', isRandom.quantity);
+        //
+        //     return {
+        //         menu_id: randomId,
+        //         quantity: isRandom.quantity,
+        //         id: cards._id,
+        //         name: cards.card_name,
+        //         description: cards.card_description || "",
+        //         avatar: cards.card_avatar,
+        //         lvl: cards.card_lvl_info?.lvl_number || 1,
+        //         rarity: cards.card_lvl_info?.lvl_name || "Default",
+        //         damage: cards.card_stats?.card_damage || 0,
+        //         protection: cards.card_stats?.card_protection || 0
+        //     }
+        // });
 
         socket.emit('get_player_cards', {
             cards_data: formattedCardsArray,
@@ -92,7 +119,6 @@ export const GAME = async (socket: Socket) => {
     socket.on("get_user_cards", async (data) => {
         const { player_id } = data;
         try {
-            console.log('get_user_cards...');
             // const player_id = (socket as SocketData).playerId;
 
             const player_info = await UsersModel.findById(player_id);
@@ -110,9 +136,18 @@ export const GAME = async (socket: Socket) => {
     socket.on("check_battle_card", async (data) => {
         const { game_key, player_id, card_id, menu_id } = data;
         try {
-            console.log('player_id', player_id);
             const game_info = await GamesModel.findOne({ game_key: game_key });
             const player_info = await UsersModel.findById(player_id);
+
+            const playerIndex = game_info.users_battle_info.findIndex(p => p._id.toString() === player_id);
+            const player_cards_length = game_info.users_battle_info[playerIndex].user_cards.battle_cards.length;
+
+            console.log('player_cards_length', player_cards_length);
+            if (player_cards_length >= 8) {
+                console.log('Лимит карт достигнут.');
+                socket.emit("error_handler", "Вы не можете набрать в колоду больше 8 карт.");
+                return;
+            }
 
             const user_card_entry = player_info.myCards.find(c => c.card_id?.toString() === card_id.toString());
             if (!user_card_entry) {
@@ -124,8 +159,6 @@ export const GAME = async (socket: Socket) => {
             if (!battle_card) {
                 return;
             }
-
-            // console.log('battle_card', battle_card);
 
             const updatedGame = await GamesModel.findOneAndUpdate(
                 {
@@ -157,76 +190,111 @@ export const GAME = async (socket: Socket) => {
         }
     });
 
-    socket.on("check_battle_cards", async (data) => {
+    socket.on("clear_battle_cards", async (data) => {
         const { game_key, player_id } = data;
         try {
-            // const player_info = await UsersModel.findById(player_id);
             const game_info = await GamesModel.findOne({ game_key: game_key });
 
             if (!game_info || !game_info.users_battle_info) {
                 return socket.emit({ message: "Game session not found" });
             }
 
-            const battle_cards = game_info.users_battle_info.find(c => c._id.toString() === player_id);
-
-            if (!battle_cards || !battle_cards.user_cards || !battle_cards.user_cards.battle_cards) {
-                return socket.emit({ message: "Player battle cards not found" });
+            const playerIndex = game_info.users_battle_info.findIndex(p => p._id.toString() === player_id);
+            if (playerIndex === -1) {
+                console.log("Игрок не найден в игре.");
+                return;
             }
 
-            const battle_cards_ids = battle_cards.user_cards.battle_cards;
-
-            const cardsArray = battle_cards_ids.map(card => card.card_id);
-
-            const battle_card = await CardsModel.find({ _id: { $in: cardsArray } });
-
-            const formattedCardsArray = battle_card.map(cards => {
-                const cardIdStr = cards._id.toString();
-
-                const matchedCard = battle_cards_ids.find(c => c.card_id.toString() === cardIdStr);
-
-                const userBaseCardId = matchedCard ? matchedCard.user_base_card_id : null;
-
-                console.log('userBaseCardId for card', cardIdStr, 'is:', userBaseCardId);
-
-                return {
-                    menu_id: userBaseCardId,
-                    id: cards._id,
-                    name: cards.card_name,
-                    description: cards.card_description || "",
-                    avatar: cards.card_avatar,
-                    lvl: cards.card_lvl_info?.lvl_number || 1,
-                    rarity: cards.card_lvl_info?.lvl_name || 'Default',
-                    damage: cards.card_stats?.card_damage || 0,
-                    protection: cards.card_stats?.card_protection || 0
-                }
-            });
-
-            socket.emit("select_battle_card_list", {
-                card: formattedCardsArray
-            });
+            game_info.users_battle_info[playerIndex].user_cards.battle_cards = [];
+            game_info.save();
         } catch (err) {
             console.log('err', err);
         }
-    });
+    })
+
+    // socket.on("check_battle_cards", async (data) => {
+    //     const { game_key, player_id } = data;
+    //     try {
+    //         // const player_info = await UsersModel.findById(player_id);
+    //         const game_info = await GamesModel.findOne({ game_key: game_key });
+    //
+    //         if (!game_info || !game_info.users_battle_info) {
+    //             return socket.emit({ message: "Game session not found" });
+    //         }
+    //
+    //         const battle_cards = game_info.users_battle_info.find(c => c._id.toString() === player_id);
+    //
+    //         if (!battle_cards || !battle_cards.user_cards || !battle_cards.user_cards.battle_cards) {
+    //             return socket.emit({ message: "Player battle cards not found" });
+    //         }
+    //
+    //         const battle_cards_ids = battle_cards.user_cards.battle_cards;
+    //
+    //         const cardsArray = battle_cards_ids.map(card => card.card_id);
+    //
+    //         const battle_card = await CardsModel.find({ _id: { $in: cardsArray } });
+    //
+    //         const formattedCardsArray = battle_card.map(cards => {
+    //             const cardIdStr = cards._id.toString();
+    //
+    //             const matchedCard = battle_cards_ids.find(c => c.card_id.toString() === cardIdStr);
+    //
+    //             const userBaseCardId = matchedCard ? matchedCard.user_base_card_id : null;
+    //
+    //             console.log('userBaseCardId for card', cardIdStr, 'is:', userBaseCardId);
+    //
+    //             return {
+    //                 menu_id: userBaseCardId,
+    //                 id: cards._id,
+    //                 name: cards.card_name,
+    //                 description: cards.card_description || "",
+    //                 avatar: cards.card_avatar,
+    //                 lvl: cards.card_lvl_info?.lvl_number || 1,
+    //                 rarity: cards.card_lvl_info?.lvl_name || 'Default',
+    //                 damage: cards.card_stats?.card_damage || 0,
+    //                 protection: cards.card_stats?.card_protection || 0
+    //             }
+    //         });
+    //
+    //         socket.emit("select_battle_card_list", {
+    //             card: formattedCardsArray
+    //         });
+    //     } catch (err) {
+    //         console.log('err', err);
+    //     }
+    // });
 
     socket.on("remove_battle_card", async (data) => {
-        const { game_key, player_id, card_id } = data;
+        const { game_key, remove_id } = data;
         try {
-            console.log('player_id', player_id);
+            const player_id = (socket as SocketData).playerId;
+
             const game_info = await GamesModel.findOne({ game_key: game_key });
             const player_info = await UsersModel.findById(player_id);
 
-            const user_card_entry = player_info.myCards.find(c => c.card_id?.toString() === card_id.toString());
-            if (!user_card_entry) {
-                console.log("Карта не найдена.");
+            if (!game_info || !player_info) {
+                console.log("Данные не найдены.");
                 return;
             }
+
+            console.log('deleting card', remove_id, 'in game', game_info._id);
+
+            const user_entry = game_info.users_battle_info.find(u => u._id?.toString() === player_id?.toString());
+            // const user_card_entry = player_info.myCards.find(c => c.user_base_card_id?.toString() === remove_id?.toString());
+            if (!user_entry) {
+                console.log("Игрок не найден.");
+                return;
+            }
+
+            const user_card_entry = user_entry.user_cards.battle_cards.find(c => c.user_base_card_id?.toString() === remove_id?.toString())
 
             const battle_card = await CardsModel.findById(user_card_entry.card_id);
             if (!battle_card) {
                 console.log("Карта не существует в базе данных.");
                 return;
             }
+
+            console.log('user_card_entry', user_card_entry);
 
             const updatedGame = await GamesModel.findOneAndUpdate(
                 {
@@ -236,7 +304,7 @@ export const GAME = async (socket: Socket) => {
                 {
                     $pull: {
                         'users_battle_info.$.user_cards.battle_cards': {
-                            card_id: battle_card,
+                            user_base_card_id: user_card_entry.user_base_card_id,
                         }
                     }
                 },

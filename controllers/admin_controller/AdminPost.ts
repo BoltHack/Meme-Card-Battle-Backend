@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import cookieParser from "cookie-parser";
+import UsersModel from "../../models/UsersModel";
 import CardsModel from "../../models/CardsModel";
 import path from "path";
 import fs from "fs";
@@ -24,7 +25,7 @@ interface CustomRequest extends Request {
     // files?: fileUpload.FileArray | null;
 }
 class AdminController_Post {
-    static CreateCardPost = async (req: CustomRequest, res: Response, next: NextFunction)=> {
+    static CreateCardPost = async (req: CustomRequest, res: Response, next: NextFunction) => {
         try {
             const { card_name, card_description, card_damage, card_protection, lvl_number, lvl_name } = req.body;
 
@@ -89,6 +90,44 @@ class AdminController_Post {
 
         }
     }
+
+    static GetRandomCardPost = async (req: CustomRequest, res: Response, next: NextFunction) => {
+        try {
+            const user = req.user;
+
+            const user_info = await UsersModel.findById(user.id);
+            if (!user_info) return res.status(404).json({ error: "Игрок не найден" });
+
+            const random_cards = await CardsModel.aggregate([{ $sample: { size: 1 } }]);
+
+            if (!random_cards && !random_cards.length) {
+                return res.status(404).json({ error: "Карта не найдена" });
+            }
+
+            random_cards.forEach(card => {
+                const existingCard = user_info.myCards.find(c => c.card_id.toString() === card._id.toString());
+
+                if (existingCard) {
+                    existingCard.quantity += 1;
+                } else {
+                    user_info.myCards.push({
+                        card_id: card._id, quantity: 1
+                    });
+                }
+            });
+
+            await user_info.save();
+
+
+            return res.status(200).json({ success: "Карта успешно выдана!" });
+        } catch (err) {
+            console.error('Ошибка в CreateCardPost:', err);
+            const errorMessage = err instanceof Error ? err.message : 'Неизвестная ошибка';
+            return res.status(500).json({error: errorMessage});
+
+        }
+    }
+
 }
 
 export default AdminController_Post;

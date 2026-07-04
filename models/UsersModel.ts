@@ -33,7 +33,7 @@ const UsersSchema = new Schema({
     money: { type: Number, default: 0 },
     lvl: { type: Number, default: 0 },
 
-    myCards: [{ card_id: { type: String } }],
+    myCards: [{ card_id: { type: String }, quantity: { type: Number, default: 1 } }],
 
     isOnline: { type: Boolean },
     gameInfo: { type: String, default: "Default" },

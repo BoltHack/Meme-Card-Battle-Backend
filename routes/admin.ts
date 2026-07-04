@@ -12,4 +12,6 @@ admin.get('/create-cards', verifyPermissions("Admin"), authenticateJWT, AdminCon
 
 admin.post('/add-card', verifyPermissions("Admin"), authenticateJWT, AdminController_Post.CreateCardPost);
 
+admin.post('/get-random-card', verifyPermissions("Admin"), authenticateJWT, AdminController_Post.GetRandomCardPost);
+
 export default admin;
