@@ -1,9 +1,11 @@
 import { Request, Response, NextFunction } from "express";
-import jwt from "jsonwebtoken";
-import cookieParser from "cookie-parser";
+import fs from 'fs';
+import path from 'path';
+
 import authenticateJWT from "../../middlewares/authenticateJWT";
-import mongoose from "mongoose";
+
 import GamesModel from "../../models/GamesModel";
+
 interface UserData {
     id: string;
     name: string;
@@ -20,81 +22,26 @@ interface UserMongooseData {
     users_battle_info: object;
 }
 class ViewController {
+    static RulesPageView = (setFilePath: string) => {
+        return async (req: CustomRequest, res: Response, next: NextFunction) => {
+            try {
+                const filePath = path.join(process.cwd(), 'docs', `${setFilePath}.md`);
 
-    static MainView = async (req: CustomRequest, res: Response, next: NextFunction)=> {
-        try {
-            const locale = req.basicData?.locale
+                if (!fs.existsSync(filePath)) {
+                    return res.status(404).json({ error: 'Страница не найдена' });
+                }
 
-            if (req.cookies['refresh_token']) {
-                await authenticateJWT(req as any, res, async () => {
-                    const user = req.user as UserData;
+                // const content = fs.readFileSync(filePath, 'utf8');
+                const content = await fs.promises.readFile(filePath, 'utf8');
 
-                    return res.status(200).json({ id: user.id, role: user.role, locale });
+                return res.status(200).json({
+                    content: content,
                 });
-                return;
+            } catch (err) {
+                console.error('Ошибка:', err);
+                const errorMessage = err instanceof Error ? err.message : 'Неизвестная ошибка';
+                return res.status(500).json({ error: errorMessage });
             }
-            return res.status(200).json({ id: '', locale });
-        } catch (err) {
-            console.error('Ошибка:', err);
-            const errorMessage = err instanceof Error ? err.message : 'Неизвестная ошибка';
-            return res.status(500).json({ error: errorMessage });
-        }
-    }
-
-    static BotSettingsView = async (req: CustomRequest, res: Response, next: NextFunction) => {
-        try {
-            const user = req.user as UserData;
-            res.json({
-                id: user.id,
-                locale: req.basicData?.locale,
-            });
-        } catch (err) {
-            console.error('Ошибка:', err);
-            const errorMessage = err instanceof Error ? err.message : 'Неизвестная ошибка';
-            return res.status(500).json({ error: errorMessage });
-        }
-    }
-
-    static HowToPlayView = async (req: CustomRequest, res: Response, next: NextFunction) => {
-        try {
-            const user = req.user as UserData;
-            res.json({
-                id: user.id,
-                locale: req.basicData?.locale,
-            });
-        } catch (err) {
-            console.error('Ошибка:', err);
-            const errorMessage = err instanceof Error ? err.message : 'Неизвестная ошибка';
-            return res.status(500).json({ error: errorMessage });
-        }
-    }
-
-    static TermsOfUseView = async (req: CustomRequest, res: Response, next: NextFunction) => {
-        try {
-            const user = req.user as UserData;
-            res.json({
-                id: user.id,
-                name: user.name,
-                locale: req.basicData?.locale
-            });
-        } catch (err) {
-            console.error('Ошибка:', err);
-            const errorMessage = err instanceof Error ? err.message : 'Неизвестная ошибка';
-            return res.status(500).json({ error: errorMessage });
-        }
-    }
-
-    static GameSettingsView = async (req: CustomRequest, res: Response, next: NextFunction) => {
-        try {
-            const user = req.user as UserData;
-            res.json({
-                id: user.id,
-                locale: req.basicData?.locale,
-            });
-        } catch (err) {
-            console.error('Ошибка:', err);
-            const errorMessage = err instanceof Error ? err.message : 'Неизвестная ошибка';
-            return res.status(500).json({ error: errorMessage });
         }
     }
 

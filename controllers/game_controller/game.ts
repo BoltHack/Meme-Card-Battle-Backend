@@ -1,5 +1,6 @@
 // import { mongoose, Types } from "mongoose";
-import { Socket } from "socket.io";
+import { Socket, Server } from "socket.io";
+import { io } from "../../app";
 const mongoose = require('mongoose');
 
 import UsersModel from "../../models/UsersModel";
@@ -22,6 +23,8 @@ interface UserMongooseData {
     gameInfo: string;
     myCards: object;
 }
+
+const gameClients: Record<string, string> = {};
 
 export const GAME = async (socket: Socket) => {
 
@@ -57,6 +60,9 @@ export const GAME = async (socket: Socket) => {
 
             const playerRoom = `game:${player_id}`;
             socket.join(playerRoom);
+
+            (socket as SocketData).playerId = player_id;
+            gameClients[player_id] = socket.id;
         } catch (err) {
             console.log('err', err);
         }
@@ -206,6 +212,7 @@ export const GAME = async (socket: Socket) => {
             }
 
             game_info.users_battle_info[playerIndex].user_cards.battle_cards = [];
+            game_info.users_battle_info[playerIndex].user_cards.select_card = "";
             game_info.save();
         } catch (err) {
             console.log('err', err);
@@ -321,13 +328,20 @@ export const GAME = async (socket: Socket) => {
     });
 
     socket.on("select_card", async (data) => {
-        const { game_key, player_id, card_id } = data;
+        const { game_key, player_id, enemy_name, card_id } = data;
         try {
+            console.log('select_card...');
             const game_info = await GamesModel.findOne({ game_key: game_key });
             if (!game_info) {
                 console.log("Игра не найдена.");
                 return;
             }
+
+            const enemy_info = await UsersModel.findOne({ requestName: enemy_name.toLowerCase() });
+
+            const matched_socket_id = gameClients[enemy_info.id];
+
+            console.log('matched_socket_id', matched_socket_id);
 
             const game_find_player = game_info.users_battle_info.find(p => p._id.toString() === player_id);
             if (!game_find_player) {
@@ -356,6 +370,8 @@ export const GAME = async (socket: Socket) => {
             isCardSelected = card_to_change.toString();
 
             await game_info.save();
+
+            io.to(matched_socket_id).emit("enemy_card_selected");
         } catch (err) {
             console.log('err', err);
         }
