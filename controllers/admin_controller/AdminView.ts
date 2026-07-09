@@ -13,19 +13,6 @@ interface CustomRequest extends Request {
     basicData: BasicData;
 }
 class AdminController_View {
-    static CreateCardsView = async (req: CustomRequest, res: Response, next: NextFunction)=> {
-        try {
-            const user = req.user as UserData;
-            res.json({
-                id: user.id,
-                locale: req.basicData?.locale,
-            });
-        } catch (err) {
-            console.error('Ошибка:', err);
-            const errorMessage = err instanceof Error ? err.message : 'Неизвестная ошибка';
-            return res.status(500).json({ error: errorMessage });
-        }
-    }
 
 }
 

@@ -5,6 +5,7 @@ import path from 'path';
 import authenticateJWT from "../../middlewares/authenticateJWT";
 
 import GamesModel from "../../models/GamesModel";
+import UsersModel from "../../models/UsersModel";
 
 interface UserData {
     id: string;
@@ -53,6 +54,7 @@ class ViewController {
 
             const user = req.user as UserData;
 
+            const user_info = await UsersModel.findById(user.id);
             const game = await GamesModel.findOne({ game_key: game_key }).exec();
 
             if (!game) {
@@ -63,6 +65,9 @@ class ViewController {
                 return res.status(404).json({ error: errorMsg });
             }
 
+            const user_cards = user_info.myCards.map(uc => uc.quantity);
+            const user_cards_count = user_cards.reduce((acc, curr) => acc + curr, 0);
+
             const player_info = game.users_battle_info.find(u => u._id.toString() === user.id) as UserMongooseData;
             const enemy_info = game.users_battle_info.find(u => u._id.toString() !== user.id) as UserMongooseData;
 
@@ -72,6 +77,10 @@ class ViewController {
                 game_type === "player_bot" && !player_info
             ) {
                 return res.status(404).json({ error: errorMsg });
+            }
+
+            if (user_cards_count < 8) {
+                return res.status(403).json({ error: "У вас недостаточно карт, чтобы начать игру." });
             }
 
             res.json({

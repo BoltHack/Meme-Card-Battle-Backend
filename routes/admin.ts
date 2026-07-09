@@ -5,10 +5,11 @@ import AdminController_Post from "../controllers/admin_controller/AdminPost";
 
 import authenticateJWT from "../middlewares/authenticateJWT";
 import verifyPermissions from "../middlewares/verifyPermissions";
+import PageRender from "../middlewares/PageRender";
 
 const admin = express.Router();
 
-admin.get('/create-cards', verifyPermissions("Admin"), authenticateJWT, AdminController_View.CreateCardsView);
+admin.get('/create-cards', verifyPermissions("Admin"), PageRender("auth"));
 
 admin.post('/add-card', verifyPermissions("Admin"), authenticateJWT, AdminController_Post.CreateCardPost);
 

@@ -1,7 +1,7 @@
 // import { mongoose, Types } from "mongoose";
 import { Socket, Server } from "socket.io";
 import { io } from "../../app";
-const mongoose = require('mongoose');
+import mongoose from "mongoose";
 
 import UsersModel from "../../models/UsersModel";
 import CardsModel from "../../models/CardsModel";
@@ -196,7 +196,7 @@ export const GAME = async (socket: Socket) => {
         }
     });
 
-    socket.on("clear_battle_cards", async (data) => {
+    socket.on("clear_game_cards", async (data) => {
         const { game_key, player_id } = data;
         try {
             const game_info = await GamesModel.findOne({ game_key: game_key });
@@ -339,9 +339,11 @@ export const GAME = async (socket: Socket) => {
 
             const enemy_info = await UsersModel.findOne({ requestName: enemy_name.toLowerCase() });
 
-            const matched_socket_id = gameClients[enemy_info.id];
+            if (!enemy_info && game_info.game_type === "player_player") {
+                console.log("Вражеский игрок не найден.")
+                return;
+            }
 
-            console.log('matched_socket_id', matched_socket_id);
 
             const game_find_player = game_info.users_battle_info.find(p => p._id.toString() === player_id);
             if (!game_find_player) {
@@ -371,6 +373,13 @@ export const GAME = async (socket: Socket) => {
 
             await game_info.save();
 
+            const selected_cards = game_info.users_battle_info.map(mgi => mgi.user_cards.select_card).toString().length;
+
+            console.log('selected_cards', selected_cards);
+
+            if (game_info.game_type === "player_bot") return;
+
+            const matched_socket_id = gameClients[enemy_info.id];
             io.to(matched_socket_id).emit("enemy_card_selected");
         } catch (err) {
             console.log('err', err);

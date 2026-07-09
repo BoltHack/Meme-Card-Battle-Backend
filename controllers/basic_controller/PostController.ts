@@ -1,10 +1,9 @@
 import { Request, Response, NextFunction } from "express";
-import jwt from "jsonwebtoken";
-import cookieParser from "cookie-parser";
+import mongoose from "mongoose";
 import UsersModel from "../../models/UsersModel";
 import CardsModel from "../../models/CardsModel";
 import GamesModel from "../../models/GamesModel";
-import {Schema} from "mongoose";
+// import mongoose, {Schema} from "mongoose";
 interface UserData {
     id: string;
     name: string;
@@ -27,33 +26,52 @@ class PostController {
 
             const user_info = await UsersModel.findById(user.id);
 
-            // const user_card_entry = user_info.myCards.map(c => c.card_id?.toString());
-            // if (user_card_entry.length < 8) {
-            //     return res.status(402).json({ error: "Недостаточно карт для игры" });
-            // }
+            if (!user_info) {
+                return res.status(404).json({ error: "Ошибка, данные не найдены." });
+            }
+
+            const user_cards = user_info.myCards.map(uc => uc.quantity);
+            const user_cards_count = user_cards.reduce((acc, curr) => acc + curr, 0);
+
+            if (user_cards_count < 8) {
+                return res.status(403).json({ error: "У вас недостаточно карт, чтобы начать игру." });
+            }
 
             const newGame = await GamesModel.create({
                 game_key: crypto.randomUUID(),
                 game_type: game_type || "player_bot",
                 game_online: { max_online: 2 },
-                users_battle_info: [{
-                    _id: user_info.id as UserData,
-                    user_name: user_info.name as UserData,
-                    user_lvl: user_info.lvl as UserData,
-                    user_cards: {
-                        battle_cards: [],
-                        select_card: ""
-                    }
-                }],
-                bot_battle_info: [{
-                    bot_mode: "",
-                    bot_id: crypto.randomUUID(),
-                    bot_name: "",
-                    bot_cards: {
-                        battle_cards: [],
-                        select_card: ""
+                users_battle_info: [
+                    {
+                        _id: user_info.id as UserData,
+                        user_name: user_info.name as UserData,
+                        user_type: "Player",
+                        user_lvl: user_info.lvl as UserData,
+                        user_cards: {
+                            battle_cards: [],
+                            select_card: ""
+                        },
                     },
-                }]
+                    {
+                        _id: new mongoose.Types.ObjectId(),
+                        user_name: "Easy Bot",
+                        user_type: "Bot",
+                        user_lvl: 0,
+                        user_cards: {
+                            battle_cards: [],
+                            select_card: ""
+                        }
+                    }
+                ],
+                // bot_battle_info: [{
+                //     bot_mode: "",
+                //     bot_id: crypto.randomUUID(),
+                //     bot_name: "",
+                //     bot_cards: {
+                //         battle_cards: [],
+                //         select_card: ""
+                //     },
+                // }]
             });
 
             user_info.gameInfo = "InGame";

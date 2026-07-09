@@ -66,6 +66,14 @@ async function gameFountTimer(socket, player_id) {
 
     if (!user_info) return;
 
+    const user_cards = user_info.myCards.map(uc => uc.quantity);
+    const user_cards_count = user_cards.reduce((acc, curr) => acc + curr, 0);
+
+    if (user_cards_count < 8) {
+        socket.emit("game_error_handler", "У вас недостаточно карт, чтобы начать игру.");
+        return;
+    }
+
     let isGameFound = false;
     let isSearchCanceled = false;
 
@@ -157,7 +165,7 @@ async function gameFountTimer(socket, player_id) {
             { _id: player_id },
             { $set: { gameInfo: "Default" } }
         );
-        socket.emit("error", "game_not_found");
+        socket.emit("game_error_handler", "В результате поиска никого не было найдено.");
     }
 }
 
@@ -198,7 +206,7 @@ io.on("connection", async (socket) => {
             if (game_type) {
 
                 if (user_info.gameInfo === "InGame") {
-                    socket.emit("error", "InGame_error");
+                    socket.emit("game_error_handler", "Вы уже находитесь в игре.");
                     return;
                 }
 

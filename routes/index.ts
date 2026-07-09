@@ -9,7 +9,7 @@ import PageRender from "../middlewares/PageRender";
 const router = express.Router();
 
 router.get('/', PageRender("no_auth"));
-router.get('/how-to-play', PageRender("no_auth"));
+router.get('/how-to-play', PageRender("public"), ViewController.RulesPageView("how-to-play"));
 
 router.get('/terms-of-use', PageRender("public"), ViewController.RulesPageView("terms-of-use"));
 router.get('/privacy-policy', PageRender("public"), ViewController.RulesPageView("privacy-policy"));
