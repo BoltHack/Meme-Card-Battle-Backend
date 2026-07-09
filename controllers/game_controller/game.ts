@@ -34,11 +34,25 @@ export const GAME = async (socket: Socket) => {
     socket.on("join_game", async (data) => {
         const { game_key, player_id } = data;
         try {
+            const user_info = await UsersModel.findById(player_id);
             const game_info = await GamesModel.findOne({ game_key: game_key });
+
             if (!game_info) {
                 console.log("Игра не найдена.");
                 return;
             }
+
+            const playerCurrentRoom = `game:${player_id}`;
+            const activeSockets = await io.in(playerCurrentRoom).fetchSockets();
+
+            if (
+                (user_info.gameInfo === "Search" || user_info.gameInfo === "InGame") &&
+                activeSockets.length > 0 && activeSockets[0].rooms.has(`game:${player_id}`)
+            ) {
+                socket.emit("game_error", "already_InGame");
+                return;
+            }
+
             const game_id = game_info._id as UserData;
 
             let updatedGame = await GamesModel.findOneAndUpdate(
@@ -398,6 +412,30 @@ export const GAME = async (socket: Socket) => {
                 console.log("Игра не найдена.");
                 return;
             }
+
+            // setTimeout(async () => {
+            //     if (gameClients[player_id] === socket.id) {
+            //
+            //         let updatedGame = await GamesModel.findOneAndUpdate(
+            //             { _id: game_id },
+            //             { $pull: { 'game_online.users': player_id } },
+            //             { new: true }
+            //         );
+            //
+            //         const playerRoom = `game:${player_id}`;
+            //         socket.leave(playerRoom);
+            //
+            //         user_info.gameInfo = "Default";
+            //         await user_info.save();
+            //
+            //         if (!updatedGame) {
+            //             console.log(`Игра ${game_id} не найдена при отключении игрока.`);
+            //             return;
+            //         }
+            //
+            //         console.log(`Игрок ${player_id} вышел из игры ${game_id}`);
+            //     }
+            // }, 3000);
 
             let updatedGame = await GamesModel.findOneAndUpdate(
                 { _id: game_id },

@@ -83,7 +83,7 @@ async function gameFountTimer(socket, player_id) {
         const current_user_info = await UsersModel.findById(player_id);
         if (!current_user_info || current_user_info.gameInfo !== "Search") {
             isSearchCanceled = true;
-            console.log('Отмена.');
+            console.log('Отмена поиска.');
             break;
         }
 
@@ -111,6 +111,8 @@ async function gameFountTimer(socket, player_id) {
                     {
                         _id: user_info._id as any,
                         user_name: user_info.name as any,
+                        user_type: "Player",
+                        user_isReady: false,
                         user_lvl: user_info.lvl as any,
                         user_cards: {
                             battle_cards: [],
@@ -120,22 +122,15 @@ async function gameFountTimer(socket, player_id) {
                     {
                         _id: matched_user._id as any,
                         user_name: matched_user.name as any,
+                        user_type: "Player",
+                        user_isReady: false,
                         user_lvl: matched_user.lvl as any,
                         user_cards: {
                             battle_cards: [],
                             select_card: ""
                         }
                     }
-                ],
-                bot_battle_info: [{
-                    bot_mode: "",
-                    bot_id: crypto.randomUUID(),
-                    bot_name: "",
-                    bot_cards: {
-                        battle_cards: [],
-                        select_card: ""
-                    },
-                }]
+                ]
             });
 
             const matched_socket_id = clients[matched_user.id];
@@ -185,8 +180,8 @@ io.on("connection", async (socket) => {
             setTimeout(async () => {
                 if (clients[player_id] === socket.id) {
                     console.log(`${player_id} в сети.`);
-                    user_info.isOnline = true as UserMongooseData;
-                    await user_info.save() as UserMongooseData;
+                    user_info.isOnline = true;
+                    await user_info.save();
                 }
             }, 3000);
         } catch (err) {
@@ -216,6 +211,8 @@ io.on("connection", async (socket) => {
                 const activeSockets = await io.in(playerRoom).fetchSockets();
 
                 if (activeSockets.length > 0 && activeSockets[0].rooms.has(`game:${player_id}`)) return;
+
+                console.log('game type off');
 
                 user_info.gameInfo = "Default";
                 await user_info.save();

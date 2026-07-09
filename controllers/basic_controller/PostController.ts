@@ -30,6 +30,11 @@ class PostController {
                 return res.status(404).json({ error: "Ошибка, данные не найдены." });
             }
 
+            if (user_info.gameInfo === "Search" || user_info.gameInfo === "InGame") {
+                return res.status(404).json({ error: "Вы уже в игре или у вас включён режим поиска." });
+                return;
+            }
+
             const user_cards = user_info.myCards.map(uc => uc.quantity);
             const user_cards_count = user_cards.reduce((acc, curr) => acc + curr, 0);
 
@@ -46,6 +51,7 @@ class PostController {
                         _id: user_info.id as UserData,
                         user_name: user_info.name as UserData,
                         user_type: "Player",
+                        user_isReady: false,
                         user_lvl: user_info.lvl as UserData,
                         user_cards: {
                             battle_cards: [],
@@ -56,6 +62,7 @@ class PostController {
                         _id: new mongoose.Types.ObjectId(),
                         user_name: "Easy Bot",
                         user_type: "Bot",
+                        user_isReady: false,
                         user_lvl: 0,
                         user_cards: {
                             battle_cards: [],

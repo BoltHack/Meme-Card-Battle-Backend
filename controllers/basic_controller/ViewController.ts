@@ -65,9 +65,6 @@ class ViewController {
                 return res.status(404).json({ error: errorMsg });
             }
 
-            const user_cards = user_info.myCards.map(uc => uc.quantity);
-            const user_cards_count = user_cards.reduce((acc, curr) => acc + curr, 0);
-
             const player_info = game.users_battle_info.find(u => u._id.toString() === user.id) as UserMongooseData;
             const enemy_info = game.users_battle_info.find(u => u._id.toString() !== user.id) as UserMongooseData;
 
@@ -78,6 +75,9 @@ class ViewController {
             ) {
                 return res.status(404).json({ error: errorMsg });
             }
+
+            const user_cards = user_info.myCards.map(uc => uc.quantity);
+            const user_cards_count = user_cards.reduce((acc, curr) => acc + curr, 0);
 
             if (user_cards_count < 8) {
                 return res.status(403).json({ error: "У вас недостаточно карт, чтобы начать игру." });
