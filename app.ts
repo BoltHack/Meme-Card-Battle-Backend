@@ -21,6 +21,7 @@ import { GAME } from "./controllers/game_controller/game";
 
 import UsersModel from "./models/UsersModel";
 import GamesModel from "./models/GamesModel";
+import mongoose from "mongoose";
 
 const serverPort = process.env.PORT;
 
@@ -138,6 +139,7 @@ async function gameFountTimer(socket, player_id) {
             console.log(`Матч создан между ${player_id} и ${matched_user._id}`);
 
             const game_key = newGame.game_key;
+            const game_id = newGame._id.toString();
 
             if (matched_socket_id) {
                 socket.emit("found_game", { game_key: game_key });
@@ -207,18 +209,93 @@ io.on("connection", async (socket) => {
 
                 await gameFountTimer(socket, player_id);
             } else if (!game_type) {
-                const playerRoom = `game:${player_id}`;
+                const playerRoom = `InGame:${player_id}`;
                 const activeSockets = await io.in(playerRoom).fetchSockets();
 
-                if (activeSockets.length > 0 && activeSockets[0].rooms.has(`game:${player_id}`)) return;
+                if (activeSockets.length > 0 && activeSockets[0].rooms.has(playerRoom)) return;
 
-                console.log('game type off');
+                if (user_info.gameInfo === "Default") return;
+
+                console.log('game type default');
 
                 user_info.gameInfo = "Default";
                 await user_info.save();
             } else {
                 console.log('error');
             }
+        } catch (err) {
+            console.log('err', err);
+        }
+    });
+
+    socket.on("start_game_bot", async () => {
+        try {
+            const player_id = (socket as SocketData).playerId;
+
+            const playerRoom = `InGame:${player_id}`;
+            const activeSockets = await io.in(playerRoom).fetchSockets();
+
+            if (activeSockets.length > 0 && activeSockets[0].rooms.has(playerRoom)) {
+                socket.emit("error_handler", "Вы уже находитесь в игре.");
+                return;
+            }
+
+            const user_info = await UsersModel.findById(player_id);
+
+            if (!user_info) {
+                socket.emit("error_handler", "Ошибка, данные не найдены.");
+                return;
+            }
+
+            if (user_info.gameInfo === "Search" || user_info.gameInfo === "InGame") {
+                socket.emit("error_handler", "Вы уже в игре или у вас включён режим поиска.");
+                return;
+            }
+
+            const user_cards = user_info.myCards.map(uc => uc.quantity);
+            const user_cards_count = user_cards.reduce((acc, curr) => acc + curr, 0);
+
+            if (user_cards_count < 8) {
+                socket.emit("error_handler", "У вас недостаточно карт, чтобы начать игру.");
+                return
+            }
+
+            const newGame = await GamesModel.create({
+                game_key: crypto.randomUUID(),
+                game_type: "player_bot",
+                game_online: { max_online: 2 },
+                users_battle_info: [
+                    {
+                        _id: user_info.id as UserData,
+                        user_name: user_info.name as UserData,
+                        user_type: "Player",
+                        user_isReady: false,
+                        user_lvl: user_info.lvl as UserData,
+                        user_cards: {
+                            battle_cards: [],
+                            select_card: ""
+                        },
+                    },
+                    {
+                        _id: new mongoose.Types.ObjectId(),
+                        user_name: "Easy Bot",
+                        user_type: "Bot",
+                        user_isReady: false,
+                        user_lvl: 0,
+                        user_cards: {
+                            battle_cards: [],
+                            select_card: ""
+                        }
+                    }
+                ]
+            });
+
+            user_info.gameInfo = "InGame";
+            user_info.save();
+
+            socket.emit("success_handler", {
+                game_key: newGame.game_key
+            });
         } catch (err) {
             console.log('err', err);
         }
@@ -249,10 +326,10 @@ io.on("connection", async (socket) => {
 
         if (!user_info) return;
 
-        const playerRoom = `game:${player_id}`;
+        const playerRoom = `InGame:${player_id}`;
         const activeSockets = await io.in(playerRoom).fetchSockets();
 
-        if (activeSockets.length > 0 && activeSockets[0].rooms.has(`game:${player_id}`)) return;
+        if (activeSockets.length > 0 && activeSockets[0].rooms.has(playerRoom)) return;
 
         setTimeout(async () => {
             if (clients[player_id] === socket.id) {

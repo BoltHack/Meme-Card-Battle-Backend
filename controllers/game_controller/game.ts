@@ -42,12 +42,12 @@ export const GAME = async (socket: Socket) => {
                 return;
             }
 
-            const playerCurrentRoom = `game:${player_id}`;
+            const playerCurrentRoom = `InGame:${player_id}`;
             const activeSockets = await io.in(playerCurrentRoom).fetchSockets();
 
             if (
                 (user_info.gameInfo === "Search" || user_info.gameInfo === "InGame") &&
-                activeSockets.length > 0 && activeSockets[0].rooms.has(`game:${player_id}`)
+                activeSockets.length > 0 && activeSockets[0].rooms.has(playerCurrentRoom)
             ) {
                 socket.emit("game_error", "already_InGame");
                 return;
@@ -72,11 +72,22 @@ export const GAME = async (socket: Socket) => {
 
             console.log(`Игрок ${player_id} успешно добавлен в игру ${updatedGame._id}`);
 
-            const playerRoom = `game:${player_id}`;
+            const playerRoom = `InGame:${player_id}`;
             socket.join(playerRoom);
 
             (socket as SocketData).playerId = player_id;
             gameClients[player_id] = socket.id;
+
+            const gameRoom = `game_room:${game_id}`;
+
+            const activeGameSockets = await io.in(gameRoom).fetchSockets();
+
+            if (activeGameSockets.length > 0 && activeGameSockets[0].rooms.has(gameRoom)) return;
+
+            socket.join(gameRoom);
+
+            const currentRooms = socket.rooms;
+            console.log('currentRooms', currentRooms);
         } catch (err) {
             console.log('err', err);
         }
@@ -387,14 +398,22 @@ export const GAME = async (socket: Socket) => {
 
             await game_info.save();
 
-            const selected_cards = game_info.users_battle_info.map(mgi => mgi.user_cards.select_card).toString().length;
-
-            console.log('selected_cards', selected_cards);
-
             if (game_info.game_type === "player_bot") return;
 
             const matched_socket_id = gameClients[enemy_info.id];
             io.to(matched_socket_id).emit("enemy_card_selected");
+
+            const selected_cards = game_info.users_battle_info.map(mgi => mgi.user_cards.select_card).toString().length;
+
+            console.log('selected_cards', selected_cards);
+            const game_id = game_info._id.toString();
+            console.log('game_id', game_id);
+            const gameRoom = `game_room:${game_id}`;
+
+            if (selected_cards === 49) {
+                console.log('Игроки выбрали свои карты!');
+                io.to(gameRoom).emit("game_cards_selected");
+            }
         } catch (err) {
             console.log('err', err);
         }
@@ -443,7 +462,7 @@ export const GAME = async (socket: Socket) => {
                 { new: true }
             );
 
-            const playerRoom = `game:${player_id}`;
+            const playerRoom = `InGame:${player_id}`;
             socket.leave(playerRoom);
 
             user_info.gameInfo = "Default";
