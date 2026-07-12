@@ -23,10 +23,10 @@ interface UserMongooseData {
     users_battle_info: object;
 }
 class ViewController {
-    static RulesPageView = (setFilePath: string) => {
+    static ReadPage_docs = (setFilePath: string) => {
         return async (req: CustomRequest, res: Response, next: NextFunction) => {
             try {
-                const filePath = path.join(process.cwd(), 'docs', `${setFilePath}.md`);
+                const filePath = path.join(process.cwd(), 'data', 'docs', `${setFilePath}.md`);
 
                 if (!fs.existsSync(filePath)) {
                     return res.status(404).json({ error: 'Страница не найдена' });
@@ -37,6 +37,30 @@ class ViewController {
 
                 return res.status(200).json({
                     content: content,
+                });
+            } catch (err) {
+                console.error('Ошибка:', err);
+                const errorMessage = err instanceof Error ? err.message : 'Неизвестная ошибка';
+                return res.status(500).json({ error: errorMessage });
+            }
+        }
+    }
+
+    static ReadPage_json = (setFilePath: string) => {
+        return async (req: CustomRequest, res: Response, next: NextFunction) => {
+            try {
+                const filePath = path.join(process.cwd(), 'data', 'json', `${setFilePath}.json`);
+
+                if (!fs.existsSync(filePath)) {
+                    return res.status(404).json({ error: 'Страница не найдена' });
+                }
+
+                const fileContent = await fs.promises.readFile(filePath, 'utf8');
+
+                const categoryData = JSON.parse(fileContent);
+
+                return res.status(200).json({
+                    categories: categoryData,
                 });
             } catch (err) {
                 console.error('Ошибка:', err);
