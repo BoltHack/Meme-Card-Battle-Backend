@@ -60,7 +60,7 @@ class ViewController {
                 const categoryData = JSON.parse(fileContent);
 
                 return res.status(200).json({
-                    categories: categoryData,
+                    categories: categoryData || "",
                 });
             } catch (err) {
                 console.error('Ошибка:', err);
