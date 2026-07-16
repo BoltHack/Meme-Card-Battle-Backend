@@ -109,21 +109,20 @@ class ViewController {
 
             res.json({
                 id: user.id,
+                name: user.name,
                 game_key: game_key,
-                player_info: {
-                    name: player_info?.user_name,
-                    lvl: player_info?.user_lvl,
-                    health: player_info?.user_health,
-                    ult: player_info?.user_ult,
-                },
-                enemy_info: {
-                    name: enemy_info?.user_name || "Bot",
-                    lvl: enemy_info?.user_lvl || 0,
-                    health: enemy_info?.user_health || 100,
-                    ult: enemy_info?.user_ult || 0,
-                },
-                // my_nickname: player_info.user_name,
-                // enemy_nickname: game.game_type === "player_player" ? enemy_info.user_name : game.game_type === "player_bot" ? "bot" : null,
+                // player_info: {
+                //     name: player_info?.user_name,
+                //     lvl: player_info?.user_lvl,
+                //     health: player_info?.user_health,
+                //     ult: player_info?.user_ult,
+                // },
+                // enemy_info: {
+                //     name: enemy_info?.user_name || "Bot",
+                //     lvl: enemy_info?.user_lvl || 0,
+                //     health: enemy_info?.user_health || 100,
+                //     ult: enemy_info?.user_ult || 0,
+                // },
                 locale: req.basicData?.locale,
             });
         } catch (err) {

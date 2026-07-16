@@ -25,10 +25,11 @@ interface UserMongooseData {
 }
 
 const gameClients: Record<string, string> = {};
+let timers: Record<number, number> = {};
 
 export const GAME = async (socket: Socket) => {
 
-    let isCardSelected = null;
+    // let isCardSelected = null;
     console.log(`Пользователь ${socket.id} подключился к игре.`);
 
     socket.on("join_game", async (data) => {
@@ -75,19 +76,13 @@ export const GAME = async (socket: Socket) => {
             const playerRoom = `InGame:${player_id}`;
             socket.join(playerRoom);
 
+            const gameRoom = `game_room:${game_info._id}`;
+            socket.join(gameRoom);
+
             (socket as SocketData).playerId = player_id;
             gameClients[player_id] = socket.id;
 
-            const gameRoom = `game_room:${game_id}`;
-
-            const activeGameSockets = await io.in(gameRoom).fetchSockets();
-
-            if (activeGameSockets.length > 0 && activeGameSockets[0].rooms.has(gameRoom)) return;
-
-            socket.join(gameRoom);
-
-            const currentRooms = socket.rooms;
-            console.log('currentRooms', currentRooms);
+            await get_players_info_func(game_info.game_key);
         } catch (err) {
             console.log('err', err);
         }
@@ -146,6 +141,206 @@ export const GAME = async (socket: Socket) => {
             cards_data: formattedCardsArray,
         });
     }
+
+    async function get_players_info_func(game_key) {
+        try {
+            const game_info = await GamesModel.findOne({ game_key: game_key });
+
+            if (!game_info) return;
+
+            const players_info = game_info.users_battle_info.map(ubi => {
+                return {
+                    id: ubi?._id,
+                    name: ubi?.user_name,
+                    lvl: ubi?.user_lvl,
+                    health: ubi?.user_health,
+                    ult: ubi?.user_ult,
+                }
+            });
+
+            const gameRoom = `game_room:${game_info._id.toString()}`;
+
+            io.to(gameRoom).emit("players_info", {
+                data: players_info
+            })
+        } catch (error) {
+            console.log('error', error);
+        }
+    }
+
+    async function game_selected_cards_result_func (socket, gameId) {
+        try {
+            const game_info = await GamesModel.findById(gameId);
+
+            if (!game_info) return;
+
+            const card_promises = game_info.users_battle_info.map(async (ubi) => {
+                const select_card = ubi.user_cards.select_card;
+
+                const card_info = await CardsModel.findById(select_card);
+
+                return {
+                    userId: ubi._id,
+                    damage: card_info?.card_stats?.card_damage || 0,
+                    protection: card_info?.card_stats?.card_protection || 0
+                }
+            });
+
+            const players_damage_info = await Promise.all(card_promises);
+
+            if (!players_damage_info[0] || !players_damage_info[1]) {
+                console.log("Ошибка: Недостаточно данных о игроках для расчета урона");
+                return;
+            }
+
+            const player1 = players_damage_info[0];
+            const player2 = players_damage_info[1];
+
+            const p1_damage = Math.max(player1.damage - player2.protection, 0);
+            const p2_damage = Math.max(player2.damage - player1.protection, 0);
+
+            console.log(`Игрок 1 нанес чистый урон: ${p1_damage}`);
+            console.log(`Игрок 2 нанес чистый урон: ${p2_damage}`);
+
+            let result = {};
+            let playerIndex = -1;
+
+            if (p1_damage > p2_damage) {
+                result = { status: 'win', winnerId: player1.userId, damage: p1_damage, text: 'Победил Игрок 1' };
+
+                playerIndex = game_info.users_battle_info.findIndex(p => p._id.toString() === player2.userId.toString());
+                if (playerIndex === -1) {
+                    console.log("player index is -1");
+                    return;
+                }
+
+                game_info.users_battle_info[playerIndex].user_health -= Number(p1_damage);
+
+                game_info.markModified('users_battle_info');
+                await game_info.save();
+            } else if (p2_damage > p1_damage) {
+                result = { status: 'win', winnerId: player2.userId, damage: p2_damage, text: 'Победил Игрок 2' };
+
+                playerIndex = game_info.users_battle_info.findIndex(p => p._id.toString() === player1.userId.toString());
+                if (playerIndex === -1) {
+                    console.log("player index is -1");
+                    return;
+                }
+
+                game_info.users_battle_info[playerIndex].user_health -= Number(p2_damage);
+
+                game_info.markModified('users_battle_info');
+                await game_info.save();
+            } else {
+                result = { status: 'draw', text: 'Ничья! Урон одинаковый или взаимно заблокирован' };
+            }
+
+            // get_players_info_func(game_info.game_key);
+            console.log('result', result);
+
+            // socket.emit("game_cards_selected_result", {
+            //     type: "result",
+            //     gameData: {
+            //         winnerId: result.winnerId.toString(),
+            //         damage: result.damage
+            //     }
+            // });
+        } catch (error) {
+            console.log('error', error);
+        }
+    }
+
+    async function clear_selected_cards_func(gameId) {
+        try {
+            const game_info = await GamesModel.findById(gameId);
+
+            if (!game_info) return;
+
+
+            const updateResult = await GamesModel.updateOne(
+                { _id: gameId },
+                { $set: { "users_battle_info.$[].user_cards.select_card": "" } }
+            );
+
+            if (updateResult.matchedCount === 0) return;
+
+            // game_info.users_battle_info.forEach(ubi => {
+            //     if (ubi.user_cards) {
+            //         ubi.user_cards.select_card = "";
+            //     }
+            // });
+            //
+            // game_info.markModified('users_battle_info');
+            //
+            // await game_info.save();
+
+            const gameRoom = `game_room:${gameId}`;
+
+            io.to(gameRoom).emit("game_cards_selected_result", {
+                type: "clear",
+            });
+        } catch (error) {
+            console.log('error', error);
+        }
+    }
+
+    async function start_cooldown_func(socket, gameId, game_key, startTime) {
+        const gameTimerId = gameId.toString();
+        try {
+            game_selected_cards_result_func(socket, gameId);
+            if (timers[gameTimerId]) {
+                clearTimeout(timers[gameTimerId]);
+                delete timers[gameTimerId];
+            }
+
+            const gameRoom = `game_room:${gameTimerId}`;
+            let timeLeft = startTime;
+
+            const tick = async () => {
+                try {
+                    if (timeLeft <= -1) {
+                        clearTimeout(timers[gameTimerId]);
+                        delete timers[gameTimerId];
+
+                        console.log(`Game ${gameTimerId}: finish`);
+                        await clear_selected_cards_func(gameId);
+                        await get_players_info_func(game_key);
+                        return;
+                    }
+                    console.log(`Game ${gameTimerId}: timer:`, timeLeft);
+                    io.to(gameRoom).emit("game_cards_selected_result", {
+                        type: "timer",
+                        gameData: {
+                            timer: timeLeft
+                        }
+                    });
+                    timeLeft--;
+
+                    timers[gameTimerId] = setTimeout(tick, 1000);
+                } catch (err) {
+                    console.log('timer error', err);
+                    clearTimeout(timers[gameTimerId]);
+                    delete timers[gameTimerId];
+                }
+            }
+            await tick();
+        } catch (error) {
+            console.log('error', error);
+        }
+    }
+
+    socket.on("get_players_info", async (data) => {
+        const { game_key } = data;
+
+        try {
+            console.log('game_key, player_id', game_key);
+
+            await get_players_info_func(game_key);
+
+        } catch (err) {
+            console.log('err', err);
+        }
+    });
 
     socket.on("get_user_cards", async (data) => {
         const { player_id } = data;
@@ -385,7 +580,11 @@ export const GAME = async (socket: Socket) => {
                 return;
             }
 
-            if (isCardSelected !== null) {
+            // if (isCardSelected !== null) {
+            //     socket.emit("error_handler", "Вы уже выбрали карту.");
+            //     return;
+            // }
+            if (game_find_player.user_cards.select_card && game_find_player.user_cards.select_card !== "") {
                 socket.emit("error_handler", "Вы уже выбрали карту.");
                 return;
             }
@@ -394,7 +593,7 @@ export const GAME = async (socket: Socket) => {
 
             game_find_player.user_cards.select_card = card_to_change;
             game_find_player.user_cards.battle_cards.splice(cardIndex, 1);
-            isCardSelected = card_to_change.toString();
+            // isCardSelected = card_to_change.toString();
 
             await game_info.save();
 
@@ -406,13 +605,17 @@ export const GAME = async (socket: Socket) => {
             const selected_cards = game_info.users_battle_info.map(mgi => mgi.user_cards.select_card).toString().length;
 
             console.log('selected_cards', selected_cards);
-            const game_id = game_info._id.toString();
-            console.log('game_id', game_id);
-            const gameRoom = `game_room:${game_id}`;
 
             if (selected_cards === 49) {
-                console.log('Игроки выбрали свои карты!');
+                const gameId = game_info._id.toString();
+                const gameRoom = `game_room:${gameId}`;
+                // game_info.users_battle_info.forEach(ubi => {
+                //     console.log('Игроки выбрали свои карты!');
+                //     io.to(`InGame:${ubi._id.toString()}`).emit("game_cards_selected");
+                // });
                 io.to(gameRoom).emit("game_cards_selected");
+
+                await start_cooldown_func(socket, gameId, game_info.game_key, 10);
             }
         } catch (err) {
             console.log('err', err);

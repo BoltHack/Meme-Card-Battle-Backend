@@ -17,7 +17,7 @@ const GamesSchema = new Schema({
         }
     },
     users_battle_info: [{
-        user_id: { type: Schema.Types.ObjectId, ref: 'User' },
+        // user_id: { type: Schema.Types.ObjectId, ref: 'User' },
         user_name: { type: String },
         user_type: { type: String, Default: "Player" },
         user_isReady: { type: Boolean, Default: false },
