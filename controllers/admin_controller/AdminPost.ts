@@ -1,13 +1,59 @@
 import { Request, Response, NextFunction } from "express";
-import jwt from "jsonwebtoken";
-import cookieParser from "cookie-parser";
-import UsersModel from "../../models/UsersModel";
-import CardsModel from "../../models/CardsModel";
 import path from "path";
 import fs from "fs";
 import mongoose from "mongoose";
-// import fileUpload from "express-fileupload";
 import crypto from "crypto";
+import { filterXSS } from "xss";
+import he from "he";
+
+import UsersModel from "../../models/UsersModel";
+import CardsModel from "../../models/CardsModel";
+import BlogsModel from "../../models/BlogsModel";
+
+// const storage = multer.diskStorage({
+//     destination: (req, file, cb) => {
+//         cb(null, 'uploads/'); // Папка на сервере (создай её в корне проекта)
+//     },
+//     filename: (req, file, cb) => {
+//         // Делаем уникальное имя: timestamp + оригинальное расширение
+//         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+//         cb(null, uniqueSuffix + path.extname(file.originalname));
+//     }
+// });
+//
+// const upload = multer({ storage: storage });
+//
+// // 2. Делаем папку 'uploads' публично доступной по ссылке
+// app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+//
+// app.post('/api/admin/upload-image', upload.single('image'), (req, res) => {
+//     if (!req.file) {
+//         return res.status(400).json({ error: 'Файл не загружен' });
+//     }
+//
+//     // Формируем полный URL до картинки
+//     // Например: http://localhost:5000/uploads/1718293821-2938.png
+//     const imageUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+//
+//     // Возвращаем JSON с URL, который так ждет наш Crepe-редактор
+//     res.status(200).json({ url: imageUrl });
+// });
+
+function cleanEditorContent(content: string): string {
+    let decoded = he.decode(content);
+
+    const options = {
+        whiteList: {
+            p: [], ul: [], li: [], ol: [], b: [], i: [], u: [],
+            strong: [], h1: [], h2: [], h3: [], h4: [], h5: [], h6: [],
+            em: [], br: [],
+            a: ["href", "target"],
+            img: ["src", "alt"]
+        }
+    };
+
+    return filterXSS(decoded, options);
+}
 
 const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp'];
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -122,6 +168,73 @@ class AdminController_Post {
             return res.status(200).json({ success: "Карта успешно выдана!" });
         } catch (err) {
             console.error('Ошибка в CreateCardPost:', err);
+            const errorMessage = err instanceof Error ? err.message : 'Неизвестная ошибка';
+            return res.status(500).json({error: errorMessage});
+
+        }
+    }
+
+    static BlogRedactionPost = async (req: CustomRequest, res: Response, next: NextFunction) => {
+        try {
+            const { post_title, post_description, post_category, content } = req.body;
+            const user = req.user;
+
+            console.log('post_title', post_title);
+            console.log('post_description', post_description);
+            console.log('post_category', post_category);
+            console.log('content', content);
+
+            const blog_id = new mongoose.Types.ObjectId();
+            const blogIdString = blog_id.toString();
+            let imagePath = "";
+
+            if (req.files && req.files.post_cover) {
+                const imageFile = Array.isArray(req.files.post_cover)
+                    ? req.files.post_cover[0]
+                    : req.files.post_cover;
+
+                const fileExt = path.extname(imageFile.name);
+
+                if (!ALLOWED_EXTENSIONS.includes(fileExt)) {
+                    return res.status(400).json({ error: "Недопустимый формат файла. Разрешены только изображения." });
+                }
+
+                if (imageFile.size > MAX_FILE_SIZE) {
+                    return res.status(400).json({ error: "Размер файла не должен превышать 5 МБ." });
+                }
+
+                const safeFileName = `${blogIdString}-${crypto.randomUUID()}${fileExt}`;
+
+                imagePath = `uploads/BlogImages/${blogIdString}/${safeFileName}`;
+
+                const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'BlogImages', blogIdString);
+                const savePath = path.join(uploadDir, safeFileName);
+
+                if (!fs.existsSync(uploadDir)) {
+                    fs.mkdirSync(uploadDir, {recursive: true});
+                }
+
+                await imageFile.mv(savePath);
+            }
+
+            const newBlog = await BlogsModel.create({
+                author: {
+                    id: user.id,
+                    name: user.name
+                },
+                main_content: {
+                    title: post_title,
+                    description: post_description,
+                    cover: imagePath
+                },
+                category: post_category,
+                content: content
+            });
+
+            return res.status(200).json({ success: "Статья успешно добавлена!" });
+
+        } catch (err) {
+            console.error('Ошибка в blogRedactionPost:', err);
             const errorMessage = err instanceof Error ? err.message : 'Неизвестная ошибка';
             return res.status(500).json({error: errorMessage});
 

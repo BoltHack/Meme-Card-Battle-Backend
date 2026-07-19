@@ -38,7 +38,6 @@ export const io = new Server(server, {
 interface SocketData extends Socket {
     playerId?: string;
 }
-
 interface UserData {
     _id: string;
     id: string;

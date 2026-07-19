@@ -2,10 +2,12 @@ import { Request, Response, NextFunction } from "express";
 import fs from 'fs';
 import path from 'path';
 
-import authenticateJWT from "../../middlewares/authenticateJWT";
+import { PageRender_v2 } from "../../middlewares/PageRender";
 
 import GamesModel from "../../models/GamesModel";
 import UsersModel from "../../models/UsersModel";
+import BlogsModel from "../../models/BlogsModel";
+import mongoose from "mongoose";
 
 interface UserData {
     id: string;
@@ -35,9 +37,10 @@ class ViewController {
                 // const content = fs.readFileSync(filePath, 'utf8');
                 const content = await fs.promises.readFile(filePath, 'utf8');
 
-                return res.status(200).json({
-                    content: content,
-                });
+                // return res.status(200).json({
+                //     content: content,
+                // });
+                return PageRender_v2("no_auth", content)(req, res, next);
             } catch (err) {
                 console.error('Ошибка:', err);
                 const errorMessage = err instanceof Error ? err.message : 'Неизвестная ошибка';
@@ -57,11 +60,12 @@ class ViewController {
 
                 const fileContent = await fs.promises.readFile(filePath, 'utf8');
 
-                const categoryData = JSON.parse(fileContent);
+                const content = JSON.parse(fileContent);
 
-                return res.status(200).json({
-                    categories: categoryData || "",
-                });
+                // return res.status(200).json({
+                //     categories: categoryData || "",
+                // });
+                return PageRender_v2("no_auth", content)(req, res, next);
             } catch (err) {
                 console.error('Ошибка:', err);
                 const errorMessage = err instanceof Error ? err.message : 'Неизвестная ошибка';
@@ -129,6 +133,141 @@ class ViewController {
             console.error('Ошибка:', err);
             const errorMessage = err instanceof Error ? err.message : 'Неизвестная ошибка';
             return res.status(500).json({ error: errorMessage });
+        }
+    }
+
+    static BlogView = async (req: CustomRequest, res: Response, next: NextFunction) => {
+        try {
+            const pageQuery = parseInt(req.query.page as string, 10);
+            const page = isNaN(pageQuery) || pageQuery < 1 ? 1 : pageQuery;
+
+            const limit = 11;
+            const skip = (page - 1) * limit;
+
+            const filteredQuery = {
+                $or: [
+                    { isVisibility: true },
+                    { isVisibility: { $exists: false } },
+                ],
+                'main_content.title': { $exists: true, $ne: "" },
+                'main_content.description': { $exists: true, $ne: "" }
+            };
+
+            const [allBlogs, totalNews] = await Promise.all([
+                BlogsModel.find(filteredQuery)
+                    .sort({ date: -1 })
+                    .skip(skip)
+                    .limit(limit),
+                BlogsModel.countDocuments(filteredQuery)
+            ]);
+
+            const blogsData = allBlogs.map(blog => ({
+                author: blog.author?.name,
+                title: blog.main_content?.title,
+                description: blog.main_content?.description,
+                cover: blog.main_content?.cover,
+                category: blog.category,
+                date: blog.date,
+                id: blog._id,
+            }));
+
+            const renderData = {
+                blog: blogsData,
+                currentPage: page,
+                totalPages: Math.ceil(totalNews / limit),
+            }
+            return PageRender_v2("no_auth", renderData)(req, res, next);
+        } catch (err) {
+            console.error('Ошибка:', err);
+            return res.status(500).json({ error: err.message });
+        }
+    }
+
+    static BlogCategoryView = async (req: CustomRequest, res: Response, next: NextFunction) => {
+        try {
+            const { blog_category } = req.params;
+
+            const pageQuery = parseInt(req.query.page as string, 10);
+            const page = isNaN(pageQuery) || pageQuery < 1 ? 1 : pageQuery;
+            // const page = parseInt(req.query.page) || 1;
+            const limit = 11;
+            const skip = (page - 1) * limit;
+
+            const filteredQuery = {
+                category: blog_category,
+                $or: [
+                    { isVisibility: true },
+                    { isVisibility: { $exists: false } },
+                ],
+                'main_content.title': { $exists: true, $ne: "" },
+                'main_content.description': { $exists: true, $ne: "" }
+            };
+
+            const [allBlogs, totalNews] = await Promise.all([
+                BlogsModel.find(filteredQuery)
+                    .sort({ date: -1 })
+                    .skip(skip)
+                    .limit(limit),
+                BlogsModel.countDocuments(filteredQuery)
+            ]);
+
+            const blogsData = allBlogs.map(blog => ({
+                author: blog.author?.name,
+                title: blog.main_content?.title,
+                description: blog.main_content?.description,
+                cover: blog.main_content?.cover,
+                category: blog.category,
+                date: blog.date,
+                id: blog._id,
+            }));
+
+            const renderData = {
+                blog: blogsData,
+                currentPage: page,
+                totalPages: Math.ceil(totalNews / limit),
+            }
+
+            return PageRender_v2("no_auth", renderData)(req, res, next);
+        } catch (err) {
+            console.error('Ошибка:', err);
+            return res.status(500).json({ error: err.message });
+        }
+    }
+
+    static BlogReadView = async (req: CustomRequest, res: Response, next: NextFunction) => {
+        try {
+            const { blog_id } = req.params;
+
+            const errorMsg = "Страница не найдена."
+
+            if (!mongoose.Types.ObjectId.isValid(blog_id)) {
+                return res.status(404).json({ error: errorMsg });
+            }
+
+            const blogRead = await BlogsModel.findById(blog_id);
+
+            if (!blogRead || blogRead.isVisibility === false) {
+                return res.status(404).json({ error: errorMsg });
+            }
+
+            if (!blogRead.main_content || !blogRead.main_content.description) {
+                return res.status(404).json({ error: errorMsg });
+            }
+
+            const renderData = {
+                author: blogRead.author?.name,
+                title: blogRead.main_content?.title,
+                description: blogRead.main_content?.description,
+                cover: blogRead.main_content?.cover,
+                category: blogRead.category,
+                date: blogRead.date,
+                content: blogRead.content
+            }
+
+            return PageRender_v2("no_auth", renderData)(req, res, next);
+        } catch (err) {
+            console.error('Ошибка:', err);
+            return res.status(500).json({ error: err.message });
         }
     }
 
