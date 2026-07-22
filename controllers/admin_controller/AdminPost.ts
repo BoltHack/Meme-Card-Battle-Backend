@@ -10,50 +10,21 @@ import UsersModel from "../../models/UsersModel";
 import CardsModel from "../../models/CardsModel";
 import BlogsModel from "../../models/BlogsModel";
 
-// const storage = multer.diskStorage({
-//     destination: (req, file, cb) => {
-//         cb(null, 'uploads/'); // Папка на сервере (создай её в корне проекта)
-//     },
-//     filename: (req, file, cb) => {
-//         // Делаем уникальное имя: timestamp + оригинальное расширение
-//         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-//         cb(null, uniqueSuffix + path.extname(file.originalname));
-//     }
-// });
+// function cleanEditorContent(content: string): string {
+//     let decoded = he.decode(content);
 //
-// const upload = multer({ storage: storage });
+//     const options = {
+//         whiteList: {
+//             p: [], ul: [], li: [], ol: [], b: [], i: [], u: [],
+//             strong: [], h1: [], h2: [], h3: [], h4: [], h5: [], h6: [],
+//             em: [], br: [],
+//             a: ["href", "target"],
+//             img: ["src", "alt"]
+//         }
+//     };
 //
-// // 2. Делаем папку 'uploads' публично доступной по ссылке
-// app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-//
-// app.post('/api/admin/upload-image', upload.single('image'), (req, res) => {
-//     if (!req.file) {
-//         return res.status(400).json({ error: 'Файл не загружен' });
-//     }
-//
-//     // Формируем полный URL до картинки
-//     // Например: http://localhost:5000/uploads/1718293821-2938.png
-//     const imageUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-//
-//     // Возвращаем JSON с URL, который так ждет наш Crepe-редактор
-//     res.status(200).json({ url: imageUrl });
-// });
-
-function cleanEditorContent(content: string): string {
-    let decoded = he.decode(content);
-
-    const options = {
-        whiteList: {
-            p: [], ul: [], li: [], ol: [], b: [], i: [], u: [],
-            strong: [], h1: [], h2: [], h3: [], h4: [], h5: [], h6: [],
-            em: [], br: [],
-            a: ["href", "target"],
-            img: ["src", "alt"]
-        }
-    };
-
-    return filterXSS(decoded, options);
-}
+//     return filterXSS(decoded, options);
+// }
 
 const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp'];
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
