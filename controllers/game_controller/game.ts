@@ -89,57 +89,61 @@ export const GAME = async (socket: Socket) => {
     });
 
     async function get_cards_func(arr) {
-        const ids = arr.map(c => c.card_id.toString());
+        try {
+            const ids = arr.map(c => c.card_id.toString());
 
-        const player_cards = await CardsModel.find({ _id: { $in: ids } });
+            const player_cards = await CardsModel.find({ _id: { $in: ids } });
 
-        const formattedCardsArray = player_cards.flatMap(card => {
-            const isRandom = arr.find(c => c.card_id.toString() === card._id.toString());
-            const count = isRandom.quantity || 1;
+            const formattedCardsArray = player_cards.flatMap(card => {
+                const isRandom = arr.find(c => c.card_id.toString() === card._id.toString());
+                const count = isRandom.quantity || 1;
 
-            // console.log('isRandom', isRandom);
-            // console.log('card', card);
+                // console.log('isRandom', isRandom);
+                // console.log('card', card);
 
-            return Array.from({ length: count }, (_, index) => ({
-                menu_id: new mongoose.Types.ObjectId(),
-                quantity: isRandom.quantity,
-                id: isRandom.card_id,
-                name: card.card_name,
-                description: card.card_description || "",
-                avatar: card.card_avatar,
-                lvl: card.card_lvl_info?.lvl_number || 1,
-                rarity: card.card_lvl_info?.lvl_name || "Default",
-                damage: card.card_stats?.card_damage || 0,
-                protection: card.card_stats?.card_protection || 0
-            }));
+                return Array.from({ length: count }, (_, index) => ({
+                    menu_id: new mongoose.Types.ObjectId(),
+                    quantity: isRandom.quantity,
+                    id: isRandom.card_id,
+                    name: card.card_name,
+                    description: card.card_description || "",
+                    avatar: card.card_avatar,
+                    lvl: card.card_lvl_info?.lvl_number || 1,
+                    rarity: card.card_lvl_info?.lvl_name || "Default",
+                    damage: card.card_stats?.card_damage || 0,
+                    protection: card.card_stats?.card_protection || 0
+                }));
 
-        });
+            });
 
-        // const formattedCardsArray = player_cards.map(cards => {
-        //     const cardIdStr = cards._id.toString();
-        //     const randomId = new mongoose.Types.ObjectId();
-        //
-        //     const isRandom = arr.find(c => c.card_id.toString() === cardIdStr.toString());
-        //     // const isQuantity = arr.find(c => c.card_id.toString() === cardIdStr.toString() ? c.quantity : null);
-        //     // console.log('isRandom', isRandom.quantity);
-        //
-        //     return {
-        //         menu_id: randomId,
-        //         quantity: isRandom.quantity,
-        //         id: cards._id,
-        //         name: cards.card_name,
-        //         description: cards.card_description || "",
-        //         avatar: cards.card_avatar,
-        //         lvl: cards.card_lvl_info?.lvl_number || 1,
-        //         rarity: cards.card_lvl_info?.lvl_name || "Default",
-        //         damage: cards.card_stats?.card_damage || 0,
-        //         protection: cards.card_stats?.card_protection || 0
-        //     }
-        // });
+            // const formattedCardsArray = player_cards.map(cards => {
+            //     const cardIdStr = cards._id.toString();
+            //     const randomId = new mongoose.Types.ObjectId();
+            //
+            //     const isRandom = arr.find(c => c.card_id.toString() === cardIdStr.toString());
+            //     // const isQuantity = arr.find(c => c.card_id.toString() === cardIdStr.toString() ? c.quantity : null);
+            //     // console.log('isRandom', isRandom.quantity);
+            //
+            //     return {
+            //         menu_id: randomId,
+            //         quantity: isRandom.quantity,
+            //         id: cards._id,
+            //         name: cards.card_name,
+            //         description: cards.card_description || "",
+            //         avatar: cards.card_avatar,
+            //         lvl: cards.card_lvl_info?.lvl_number || 1,
+            //         rarity: cards.card_lvl_info?.lvl_name || "Default",
+            //         damage: cards.card_stats?.card_damage || 0,
+            //         protection: cards.card_stats?.card_protection || 0
+            //     }
+            // });
 
-        socket.emit('get_player_cards', {
-            cards_data: formattedCardsArray,
-        });
+            socket.emit('get_player_cards', {
+                cards_data: formattedCardsArray,
+            });
+        } catch (error) {
+            console.log('error', error);
+        }
     }
 
     async function get_players_info_func(game_key) {
@@ -238,13 +242,15 @@ export const GAME = async (socket: Socket) => {
             // get_players_info_func(game_info.game_key);
             console.log('result', result);
 
-            // socket.emit("game_cards_selected_result", {
-            //     type: "result",
-            //     gameData: {
-            //         winnerId: result.winnerId.toString(),
-            //         damage: result.damage
-            //     }
-            // });
+            const gameRoom = `game_room:${gameId}`;
+
+            io.to(gameRoom).emit("game_cards_selected_result", {
+                type: "result",
+                gameData: {
+                    winnerId: result.winnerId.toString(),
+                    damage: result.damage
+                }
+            });
         } catch (error) {
             console.log('error', error);
         }
@@ -597,7 +603,7 @@ export const GAME = async (socket: Socket) => {
 
             await game_info.save();
 
-            if (game_info.game_type === "player_bot") return;
+            // if (game_info.game_type === "player_bot") return;
 
             const matched_socket_id = gameClients[enemy_info.id];
             io.to(matched_socket_id).emit("enemy_card_selected");
@@ -609,10 +615,7 @@ export const GAME = async (socket: Socket) => {
             if (selected_cards === 49) {
                 const gameId = game_info._id.toString();
                 const gameRoom = `game_room:${gameId}`;
-                // game_info.users_battle_info.forEach(ubi => {
-                //     console.log('Игроки выбрали свои карты!');
-                //     io.to(`InGame:${ubi._id.toString()}`).emit("game_cards_selected");
-                // });
+
                 io.to(gameRoom).emit("game_cards_selected");
 
                 await start_cooldown_func(socket, gameId, game_info.game_key, 10);

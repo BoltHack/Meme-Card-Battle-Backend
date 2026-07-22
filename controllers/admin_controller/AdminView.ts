@@ -3,6 +3,9 @@ import jwt from "jsonwebtoken";
 import cookieParser from "cookie-parser";
 import mongoose from "mongoose";
 import BlogsModel from "../../models/BlogsModel";
+import UsersModel from "../../models/UsersModel";
+import { PageRender_v2 } from "../../middlewares/PageRender";
+
 interface UserData {
     id: string;
     name: string;
@@ -47,6 +50,32 @@ class AdminController_View {
             res.status(200).json({
                 blog: blogData
             });
+        } catch (err) {
+            console.error('Ошибка:', err);
+            return res.status(500).json({ error: err.message });
+        }
+    }
+
+    static TeamView = async (req: CustomRequest, res: Response, next: NextFunction) => {
+        try {
+            const allStaff = await UsersModel.find({role: { $in: [ 'Admin' ] } });
+
+            const renderData = allStaff.map(staff => ({
+                id: staff.id,
+                name: staff.name,
+                image: staff.image,
+                role: staff.role
+            }));
+
+            // const renderData = {
+            //     staffData: staffData
+            // }
+
+            console.log('renderData', renderData);
+
+            // return res.status(200).json({ success: "123"});
+
+            return PageRender_v2("auth", renderData)(req, res, next);
         } catch (err) {
             console.error('Ошибка:', err);
             return res.status(500).json({ error: err.message });

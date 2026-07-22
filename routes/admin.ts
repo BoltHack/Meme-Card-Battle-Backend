@@ -9,6 +9,9 @@ import { PageRender } from "../middlewares/PageRender";
 
 const admin = express.Router();
 
+admin.get('/panel', verifyPermissions("Admin"), PageRender("auth"));
+admin.get('/team', verifyPermissions("Admin"), AdminController_View.TeamView);
+
 admin.get('/create/card', verifyPermissions("Admin"), PageRender("auth"));
 admin.get('/create/blog', verifyPermissions("Admin"), PageRender("auth"));
 admin.get('/edit/blog/:blog_id', verifyPermissions("Admin"), authenticateJWT, AdminController_View.EditBlogView);

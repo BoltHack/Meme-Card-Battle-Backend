@@ -1,7 +1,7 @@
 import express from "express";
 
 import ViewController from "../controllers/basic_controller/ViewController";
-import PostController from "../controllers/basic_controller/PostController";
+// import PostController from "../controllers/basic_controller/PostController";
 
 import authenticateJWT from "../middlewares/authenticateJWT";
 import { PageRender } from "../middlewares/PageRender";

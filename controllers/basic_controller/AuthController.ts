@@ -196,7 +196,6 @@ class AuthController {
 
     static logout = async (req: CustomRequest, res: Response, next: NextFunction) => {
         try {
-            req.cookies.user = null;
             res.clearCookie('access_token');
             res.clearCookie('refresh_token');
 
