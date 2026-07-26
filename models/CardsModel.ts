@@ -12,7 +12,8 @@ const CardsSchema = new Schema({
     card_lvl_info: {
         lvl_number: { type: Number },
         lvl_name: { type: String },
-    }
+    },
+    power_slot: { type: Number, default: 5 }
 });
 
 CardsSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });

@@ -3,8 +3,25 @@ import path from "path";
 import fs from "fs";
 import mongoose from "mongoose";
 import crypto from "crypto";
-import { filterXSS } from "xss";
+// import escapeHtml from "escape-html";
 import he from "he";
+
+// function cleanTextRegex(dirtyInput) {
+//     const decoded = he.decode(dirtyInput);
+//
+//     return decoded.replace(/<\/?[^>]+(>|$)/g, '');
+// }
+
+function cleanTextRegex(dirtyInput) {
+    if (typeof dirtyInput !== 'string') return dirtyInput;
+
+    // 1. Декодируем сущности (dfg&lt;/div превращается в dfg</div>)
+    const decoded = he.decode(dirtyInput);
+
+    // 2. Удаляем только HTML-теги.
+    // Символы \n при этом полностью сохраняются.
+    return decoded.replace(/<\/?[^>]+(>|$)/g, '');
+}
 
 import UsersModel from "../../models/UsersModel";
 import CardsModel from "../../models/CardsModel";
@@ -68,9 +85,9 @@ class AdminController_Post {
 
                 const safeFileName = `${cardIdString}-${crypto.randomUUID()}${fileExt}`;
 
-                imagePath = `uploads/CardImages/${cardIdString}/${safeFileName}`;
+                imagePath = `uploads/CardCovers/${cardIdString}/${safeFileName}`;
 
-                const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'CardImages', cardIdString);
+                const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'CardCovers', cardIdString);
                 const savePath = path.join(uploadDir, safeFileName);
 
                 if (!fs.existsSync(uploadDir)) {
@@ -176,9 +193,9 @@ class AdminController_Post {
 
                 const safeFileName = `${blogIdString}-${crypto.randomUUID()}${fileExt}`;
 
-                imagePath = `uploads/BlogImages/${blogIdString}/${safeFileName}`;
+                imagePath = `uploads/BlogCovers/${blogIdString}/${safeFileName}`;
 
-                const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'BlogImages', blogIdString);
+                const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'BlogCovers', blogIdString);
                 const savePath = path.join(uploadDir, safeFileName);
 
                 if (!fs.existsSync(uploadDir)) {
@@ -199,7 +216,7 @@ class AdminController_Post {
                     cover: imagePath
                 },
                 category: post_category,
-                content: content
+                content: cleanTextRegex(content)
             });
 
             return res.status(200).json({ success: "Статья успешно добавлена!" });

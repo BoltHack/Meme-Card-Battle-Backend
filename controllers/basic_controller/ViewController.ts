@@ -5,6 +5,7 @@ import path from 'path';
 import { PageRender_v2 } from "../../middlewares/PageRender";
 
 import GamesModel from "../../models/GamesModel";
+import CardsModel from "../../models/CardsModel";
 import UsersModel from "../../models/UsersModel";
 import BlogsModel from "../../models/BlogsModel";
 import mongoose from "mongoose";
@@ -74,6 +75,69 @@ class ViewController {
         }
     }
 
+    static MyCardsView = async (req: CustomRequest, res: Response, next: NextFunction) => {
+        try {
+            const { cards_category } = req.params;
+            const user = req.user;
+            const user_info = await UsersModel.findById(user.id);
+
+            if (!user_info) {
+                return res.status(404).json({ error: 'Пользователь не найден в базе данных' });
+            }
+
+            const user_cards = user_info.myCards || [];
+
+            const cardsArray = user_cards.map(card => card.card_id);
+
+            const cardQuery: Record<string, any> = {
+                _id: { $in: cardsArray }
+            };
+
+            if (cards_category !== 'all') {
+                cardQuery["card_lvl_info.lvl_name"] = String(cards_category).toUpperCase();
+            }
+
+            const get_cards = await CardsModel.find(cardQuery);
+
+            const renderData = get_cards.map(cards => {
+                const cardIdStr = cards._id.toString();
+
+                const matched_quantity = user_cards.find(c => c.card_id?.toString() === cardIdStr);
+
+                const quantity = matched_quantity ? matched_quantity.quantity : null;
+
+                return {
+                    card_id: cards._id.toString(),
+                    card_damage: cards.card_stats.card_damage,
+                    card_protection: cards.card_stats.card_protection,
+                    lvl_number: cards.card_lvl_info.lvl_number,
+                    lvl_name: cards.card_lvl_info.lvl_name,
+                    card_name: cards.card_name,
+                    card_description: cards.card_description,
+                    card_avatar: cards.card_avatar,
+                    power_slot: cards.power_slot,
+                    card_quantity: quantity
+                }
+            });
+
+            return res.status(200).json({
+                id: user?.id || "",
+                name: user?.name || "",
+                role: user?.role || "",
+                stats: {
+                    lvl: user_info.lvl,
+                    money: user_info.money,
+                    coins: user_info.coins,
+                },
+                renderData: renderData.length > 0 ? renderData : null
+            })
+        } catch (err) {
+            console.error('Ошибка:', err);
+            const errorMessage = err instanceof Error ? err.message : 'Неизвестная ошибка';
+            return res.status(500).json({ error: errorMessage });
+        }
+    }
+
     static GameView = async (req: CustomRequest, res: Response, next: NextFunction) => {
         try {
             const { game_type, game_key } = req.params;
@@ -115,18 +179,6 @@ class ViewController {
                 id: user.id,
                 name: user.name,
                 game_key: game_key,
-                // player_info: {
-                //     name: player_info?.user_name,
-                //     lvl: player_info?.user_lvl,
-                //     health: player_info?.user_health,
-                //     ult: player_info?.user_ult,
-                // },
-                // enemy_info: {
-                //     name: enemy_info?.user_name || "Bot",
-                //     lvl: enemy_info?.user_lvl || 0,
-                //     health: enemy_info?.user_health || 100,
-                //     ult: enemy_info?.user_ult || 0,
-                // },
                 locale: req.basicData?.locale,
             });
         } catch (err) {
@@ -141,7 +193,7 @@ class ViewController {
             const pageQuery = parseInt(req.query.page as string, 10);
             const page = isNaN(pageQuery) || pageQuery < 1 ? 1 : pageQuery;
 
-            const limit = 11;
+            const limit = 10;
             const skip = (page - 1) * limit;
 
             const filteredQuery = {
@@ -255,7 +307,10 @@ class ViewController {
             }
 
             const renderData = {
-                author: blogRead.author?.name,
+                author: {
+                    id: blogRead.author?.id,
+                    name: blogRead.author?.name
+                },
                 title: blogRead.main_content?.title,
                 description: blogRead.main_content?.description,
                 cover: blogRead.main_content?.cover,

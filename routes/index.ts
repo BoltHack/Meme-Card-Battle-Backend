@@ -12,6 +12,8 @@ router.get('/', PageRender("no_auth"));
 
 router.get('/help-center', ViewController.ReadPage_json("help-center_categories"));
 
+router.get('/my-cards/:cards_category', authenticateJWT, ViewController.MyCardsView);
+
 router.get('/how-to-play', ViewController.ReadPage_docs("how-to-play"));
 
 router.get('/terms-of-use', ViewController.ReadPage_docs("terms-of-use"));

@@ -51,12 +51,9 @@ interface UserMongooseData {
 }
 
 const clients: Record<string, string> = {};
-
-
 function delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
-
 async function gameFountTimer(socket, player_id) {
     const user_info = await UsersModel.findByIdAndUpdate(
         player_id,

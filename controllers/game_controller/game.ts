@@ -12,17 +12,11 @@ interface SocketData extends Socket {
     gameId?: string;
 }
 
-interface UserData {
-    _id: string;
-    game_key: string;
-    player_id: string;
-}
 
-interface UserMongooseData {
-    isOnline: boolean;
-    gameInfo: string;
-    myCards: object;
-}
+
+// interface GameData {
+//     gameInfo: string;
+// }
 
 const gameClients: Record<string, string> = {};
 let timers: Record<number, number> = {};
@@ -32,7 +26,7 @@ export const GAME = async (socket: Socket) => {
     // let isCardSelected = null;
     console.log(`Пользователь ${socket.id} подключился к игре.`);
 
-    socket.on("join_game", async (data) => {
+    socket.on("join_game", async (data: any) => {
         const { game_key, player_id } = data;
         try {
             const user_info = await UsersModel.findById(player_id);
@@ -54,7 +48,7 @@ export const GAME = async (socket: Socket) => {
                 return;
             }
 
-            const game_id = game_info._id as UserData;
+            const game_id = game_info._id;
 
             let updatedGame = await GamesModel.findOneAndUpdate(
                 { _id: game_id },
@@ -178,19 +172,20 @@ export const GAME = async (socket: Socket) => {
 
             if (!game_info) return;
 
-            const card_promises = game_info.users_battle_info.map(async (ubi) => {
-                const select_card = ubi.user_cards.select_card;
+            const cardIds = game_info.users_battle_info.map(ubi => ubi.user_cards.select_card).filter(Boolean);
+            const cards = await CardsModel.find({ _id: { $in: cardIds } });
+            const cardsMap = new Map(cards.map(c => [c._id.toString(), c]));
 
-                const card_info = await CardsModel.findById(select_card);
+            console.log('cardsMap', cardsMap);
 
+            const players_damage_info = game_info.users_battle_info.map((ubi) => {
+                const card_info = cardsMap.get(ubi.user_cards.select_card?.toString());
                 return {
-                    userId: ubi._id,
+                    userId: ubi._id.toString(),
                     damage: card_info?.card_stats?.card_damage || 0,
                     protection: card_info?.card_stats?.card_protection || 0
-                }
+                };
             });
-
-            const players_damage_info = await Promise.all(card_promises);
 
             if (!players_damage_info[0] || !players_damage_info[1]) {
                 console.log("Ошибка: Недостаточно данных о игроках для расчета урона");
@@ -206,40 +201,41 @@ export const GAME = async (socket: Socket) => {
             console.log(`Игрок 1 нанес чистый урон: ${p1_damage}`);
             console.log(`Игрок 2 нанес чистый урон: ${p2_damage}`);
 
-            let result = {};
-            let playerIndex = -1;
+            // let result = {};
+            let result = {
+                status: 'draw',
+                winnerId: null,
+                damage: 0,
+                text: 'Ничья! Урон одинаковый или взаимно заблокирован.'
+            };
 
             if (p1_damage > p2_damage) {
-                result = { status: 'win', winnerId: player1.userId, damage: p1_damage, text: 'Победил Игрок 1' };
+                result = { status: 'damage', winnerId: player1.userId, damage: p1_damage, text: `Игрок 1 нанёс урон в ${p2_damage} единиц.` };
 
-                playerIndex = game_info.users_battle_info.findIndex(p => p._id.toString() === player2.userId.toString());
-                if (playerIndex === -1) {
-                    console.log("player index is -1");
-                    return;
+                game_info.users_battle_info[0].user_ult += Number(p1_damage);
+                game_info.users_battle_info[1].user_health -= Number(p1_damage);
+
+                if (game_info.users_battle_info[1].user_health === 0) {
+                    result = { status: 'win', winnerId: player1.userId, damage: p1_damage, text: 'Победил Игрок 1.' };
                 }
-
-                game_info.users_battle_info[playerIndex].user_health -= Number(p1_damage);
-
-                game_info.markModified('users_battle_info');
-                await game_info.save();
             } else if (p2_damage > p1_damage) {
-                result = { status: 'win', winnerId: player2.userId, damage: p2_damage, text: 'Победил Игрок 2' };
+                result = { status: 'damage', winnerId: player2.userId, damage: p2_damage, text: `Игрок 2 нанёс урон в ${p2_damage} единиц.` };
 
-                playerIndex = game_info.users_battle_info.findIndex(p => p._id.toString() === player1.userId.toString());
-                if (playerIndex === -1) {
-                    console.log("player index is -1");
-                    return;
+                game_info.users_battle_info[1].user_ult += Number(p2_damage);
+                game_info.users_battle_info[0].user_health -= Number(p2_damage);
+
+                if (game_info.users_battle_info[0].user_health === 0) {
+                    result = { status: 'win', winnerId: player2.userId, damage: p2_damage, text: 'Победил Игрок 2.' };
                 }
-
-                game_info.users_battle_info[playerIndex].user_health -= Number(p2_damage);
-
-                game_info.markModified('users_battle_info');
-                await game_info.save();
             } else {
-                result = { status: 'draw', text: 'Ничья! Урон одинаковый или взаимно заблокирован' };
+                result = { status: 'draw', text: 'Ничья! Урон одинаковый или взаимно заблокирован.' };
             }
 
-            // get_players_info_func(game_info.game_key);
+            if (result.status !== 'draw') {
+                game_info.markModified('users_battle_info');
+                await game_info.save();
+            }
+
             console.log('result', result);
 
             const gameRoom = `game_room:${gameId}`;
@@ -247,8 +243,8 @@ export const GAME = async (socket: Socket) => {
             io.to(gameRoom).emit("game_cards_selected_result", {
                 type: "result",
                 gameData: {
-                    winnerId: result.winnerId.toString(),
-                    damage: result.damage
+                    winnerId: result.winnerId ? result.winnerId.toString() : null,
+                    result: result
                 }
             });
         } catch (error) {
@@ -357,7 +353,7 @@ export const GAME = async (socket: Socket) => {
 
             if (!player_info) return;
 
-            const player_cards = player_info.myCards as UserMongooseData;
+            const player_cards = player_info.myCards;
 
             await get_cards_func(player_cards);
         } catch (err) {
@@ -366,7 +362,7 @@ export const GAME = async (socket: Socket) => {
     });
 
     socket.on("check_battle_card", async (data) => {
-        const { game_key, player_id, card_id, menu_id } = data;
+        const { game_key, player_id, card_id, menu_id, enemy_id } = data;
         try {
             const game_info = await GamesModel.findOne({ game_key: game_key });
             const player_info = await UsersModel.findById(player_id);
@@ -413,6 +409,9 @@ export const GAME = async (socket: Socket) => {
                 return;
             }
 
+            // const matched_socket_id = gameClients[enemy_id];
+            // io.to(matched_socket_id).emit("enemy_hand_list", "battle_card_selected");
+
             socket.emit("select_battle_card", {
                 card: battle_card,
                 menu_id: menu_id
@@ -436,6 +435,11 @@ export const GAME = async (socket: Socket) => {
                 console.log("Игрок не найден в игре.");
                 return;
             }
+
+            if (
+                game_info.users_battle_info[playerIndex].user_cards.battle_cards.length < 1 &&
+                game_info.users_battle_info[playerIndex].user_cards.select_card === ""
+            ) return;
 
             game_info.users_battle_info[playerIndex].user_cards.battle_cards = [];
             game_info.users_battle_info[playerIndex].user_cards.select_card = "";
@@ -498,7 +502,7 @@ export const GAME = async (socket: Socket) => {
     // });
 
     socket.on("remove_battle_card", async (data) => {
-        const { game_key, remove_id } = data;
+        const { game_key, remove_id, enemy_id } = data;
         try {
             const player_id = (socket as SocketData).playerId;
 
@@ -548,13 +552,16 @@ export const GAME = async (socket: Socket) => {
                 console.log("Игра не найдена или игрок не участвует в ней.");
                 return;
             }
+
+            // const matched_socket_id = gameClients[enemy_id];
+            // io.to(matched_socket_id).emit("enemy_hand_list", "card_removed");
         } catch (err) {
             console.log('err', err);
         }
     });
 
     socket.on("select_card", async (data) => {
-        const { game_key, player_id, enemy_name, card_id } = data;
+        const { game_key, player_id, enemy_id, card_id } = data;
         try {
             console.log('select_card...');
             const game_info = await GamesModel.findOne({ game_key: game_key });
@@ -563,13 +570,12 @@ export const GAME = async (socket: Socket) => {
                 return;
             }
 
-            const enemy_info = await UsersModel.findOne({ requestName: enemy_name.toLowerCase() });
+            const enemy_info = await UsersModel.findById(enemy_id);
 
             if (!enemy_info && game_info.game_type === "player_player") {
                 console.log("Вражеский игрок не найден.")
                 return;
             }
-
 
             const game_find_player = game_info.users_battle_info.find(p => p._id.toString() === player_id);
             if (!game_find_player) {
@@ -606,7 +612,7 @@ export const GAME = async (socket: Socket) => {
             // if (game_info.game_type === "player_bot") return;
 
             const matched_socket_id = gameClients[enemy_info.id];
-            io.to(matched_socket_id).emit("enemy_card_selected");
+            io.to(matched_socket_id).emit("enemy_hand_list", "card_selected");
 
             const selected_cards = game_info.users_battle_info.map(mgi => mgi.user_cards.select_card).toString().length;
 
