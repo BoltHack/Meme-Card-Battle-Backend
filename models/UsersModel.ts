@@ -29,9 +29,9 @@ const UsersSchema = new Schema({
     role: { type: String, default: "User" },
     ip: { type: String, default: "" },
 
-    coins: { type: Number, default: 0 },
-    money: { type: Number, default: 0 },
-    lvl: { type: Number, default: 0 },
+    coins: { type: Number, min: 0, default: 0 },
+    money: { type: Number, min: 0, default: 0 },
+    lvl: { type: Number, min: 0, max: 100, default: 1 },
 
     myCards: [{ card_id: { type: String }, quantity: { type: Number, default: 1 } }],
 

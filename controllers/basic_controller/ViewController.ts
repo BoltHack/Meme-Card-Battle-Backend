@@ -88,6 +88,7 @@ class ViewController {
             const user_cards = user_info.myCards || [];
 
             const cardsArray = user_cards.map(card => card.card_id);
+            const quantityArray = user_cards.map(card => card.quantity);
 
             const cardQuery: Record<string, any> = {
                 _id: { $in: cardsArray }
@@ -116,9 +117,12 @@ class ViewController {
                     card_description: cards.card_description,
                     card_avatar: cards.card_avatar,
                     power_slot: cards.power_slot,
-                    card_quantity: quantity
+                    card_quantity: quantity,
+                    power_slot: cards.power_slot
                 }
             });
+
+            const cards_count = quantityArray?.reduce((acc, card) => acc + card, 0)
 
             return res.status(200).json({
                 id: user?.id || "",
@@ -129,6 +133,7 @@ class ViewController {
                     money: user_info.money,
                     coins: user_info.coins,
                 },
+                cards_count: cards_count || 0,
                 renderData: renderData.length > 0 ? renderData : null
             })
         } catch (err) {
@@ -190,22 +195,22 @@ class ViewController {
 
     static BlogView = async (req: CustomRequest, res: Response, next: NextFunction) => {
         try {
-            const pageQuery = parseInt(req.query.page as string, 10);
+            const pageQuery = parseInt(req.query.page as string, 7);
             const page = isNaN(pageQuery) || pageQuery < 1 ? 1 : pageQuery;
 
-            const limit = 10;
+            const limit = 7;
             const skip = (page - 1) * limit;
 
-            const filteredQuery = {
+            const filteredQuery: Record<string, any> = {
                 $or: [
                     { isVisibility: true },
                     { isVisibility: { $exists: false } },
                 ],
                 'main_content.title': { $exists: true, $ne: "" },
                 'main_content.description': { $exists: true, $ne: "" }
-            };
+            }
 
-            const [allBlogs, totalNews] = await Promise.all([
+            const [allBlogs, totalBlogs] = await Promise.all([
                 BlogsModel.find(filteredQuery)
                     .sort({ date: -1 })
                     .skip(skip)
@@ -226,12 +231,12 @@ class ViewController {
             const renderData = {
                 blog: blogsData,
                 currentPage: page,
-                totalPages: Math.ceil(totalNews / limit),
+                totalPages: Math.max(1,  Math.ceil(totalBlogs / limit)),
             }
             return PageRender_v2("no_auth", renderData)(req, res, next);
         } catch (err) {
             console.error('Ошибка:', err);
-            return res.status(500).json({ error: err.message });
+            return res.status(500).json({ error: "Внутренняя ошибка сервера" });
         }
     }
 
@@ -239,13 +244,13 @@ class ViewController {
         try {
             const { blog_category } = req.params;
 
-            const pageQuery = parseInt(req.query.page as string, 10);
+            const pageQuery = parseInt(req.query.page as string, 7);
             const page = isNaN(pageQuery) || pageQuery < 1 ? 1 : pageQuery;
             // const page = parseInt(req.query.page) || 1;
-            const limit = 11;
+            const limit = 7;
             const skip = (page - 1) * limit;
 
-            const filteredQuery = {
+            const filteredQuery: Record<string, any> = {
                 category: blog_category,
                 $or: [
                     { isVisibility: true },
@@ -255,7 +260,7 @@ class ViewController {
                 'main_content.description': { $exists: true, $ne: "" }
             };
 
-            const [allBlogs, totalNews] = await Promise.all([
+            const [allBlogs, totalBlogs] = await Promise.all([
                 BlogsModel.find(filteredQuery)
                     .sort({ date: -1 })
                     .skip(skip)
@@ -276,13 +281,14 @@ class ViewController {
             const renderData = {
                 blog: blogsData,
                 currentPage: page,
-                totalPages: Math.ceil(totalNews / limit),
+                // totalPages: Math.ceil(totalBlogs / limit),
+                totalPages: Math.max(1,  Math.ceil(totalBlogs / limit)),
             }
 
             return PageRender_v2("no_auth", renderData)(req, res, next);
         } catch (err) {
             console.error('Ошибка:', err);
-            return res.status(500).json({ error: err.message });
+            return res.status(500).json({ error: "Внутренняя ошибка сервера" });
         }
     }
 
@@ -322,7 +328,7 @@ class ViewController {
             return PageRender_v2("no_auth", renderData)(req, res, next);
         } catch (err) {
             console.error('Ошибка:', err);
-            return res.status(500).json({ error: err.message });
+            return res.status(500).json({ error: "Внутренняя ошибка сервера" });
         }
     }
 

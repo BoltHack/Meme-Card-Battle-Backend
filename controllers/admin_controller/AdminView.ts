@@ -52,7 +52,7 @@ class AdminController_View {
             });
         } catch (err) {
             console.error('Ошибка:', err);
-            return res.status(500).json({ error: err.message });
+            return res.status(500).json({ error: "Внутренняя ошибка сервера" });
         }
     }
 
@@ -78,7 +78,7 @@ class AdminController_View {
             return PageRender_v2("auth", renderData)(req, res, next);
         } catch (err) {
             console.error('Ошибка:', err);
-            return res.status(500).json({ error: err.message });
+            return res.status(500).json({ error: "Внутренняя ошибка сервера" });
         }
     }
 }

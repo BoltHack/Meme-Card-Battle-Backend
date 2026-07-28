@@ -105,7 +105,8 @@ export const GAME = async (socket: Socket) => {
                     lvl: card.card_lvl_info?.lvl_number || 1,
                     rarity: card.card_lvl_info?.lvl_name || "Default",
                     damage: card.card_stats?.card_damage || 0,
-                    protection: card.card_stats?.card_protection || 0
+                    protection: card.card_stats?.card_protection || 0,
+                    power_slot: card.power_slot || 5
                 }));
 
             });
@@ -221,10 +222,10 @@ export const GAME = async (socket: Socket) => {
             } else if (p2_damage > p1_damage) {
                 result = { status: 'damage', winnerId: player2.userId, damage: p2_damage, text: `Игрок 2 нанёс урон в ${p2_damage} единиц.` };
 
-                game_info.users_battle_info[1].user_ult += Number(p2_damage);
-                game_info.users_battle_info[0].user_health -= Number(p2_damage);
+                game_info.users_battle_info[1].user_ult += Number(p2_damage / 2);
+                game_info.users_battle_info[0].user_health -= Number(p2_damage / 2);
 
-                if (game_info.users_battle_info[0].user_health === 0) {
+                if (game_info.users_battle_info[0].user_health <= 0) {
                     result = { status: 'win', winnerId: player2.userId, damage: p2_damage, text: 'Победил Игрок 2.' };
                 }
             } else {
