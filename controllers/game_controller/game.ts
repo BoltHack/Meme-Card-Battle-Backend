@@ -1,4 +1,3 @@
-// import { mongoose, Types } from "mongoose";
 import { Socket, Server } from "socket.io";
 import { io } from "../../app";
 import mongoose from "mongoose";
@@ -7,16 +6,23 @@ import UsersModel from "../../models/UsersModel";
 import CardsModel from "../../models/CardsModel";
 import GamesModel from "../../models/GamesModel";
 
+
 interface SocketData extends Socket {
     playerId?: string;
     gameId?: string;
 }
 
+interface GameData {
+    users_battle_info: any;
+}
 
+interface PlayerData {
+    myCards: any;
+}
 
-// interface GameData {
-//     gameInfo: string;
-// }
+function getRandomMoney(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
 
 const gameClients: Record<string, string> = {};
 let timers: Record<number, number> = {};
@@ -167,9 +173,20 @@ export const GAME = async (socket: Socket) => {
         }
     }
 
-    async function game_selected_cards_result_func (socket, gameId) {
+    async function set_winner_func(userId) {
         try {
-            const game_info = await GamesModel.findById(gameId);
+            const user_info = await UsersModel.findById(userId);
+
+            user_info.money += getRandomMoney(500, 1000);
+            user_info.save();
+        } catch (error) {
+            console.log('error', error);
+        }
+    }
+
+    async function game_selected_cards_result_func(socket, gameId) {
+        try {
+            const game_info = await GamesModel.findById(gameId) as GameData;
 
             if (!game_info) return;
 
@@ -208,28 +225,35 @@ export const GAME = async (socket: Socket) => {
                 winnerId: null,
                 damage: 0,
                 text: 'Ничья! Урон одинаковый или взаимно заблокирован.'
-            };
+            }
 
             if (p1_damage > p2_damage) {
-                result = { status: 'damage', winnerId: player1.userId, damage: p1_damage, text: `Игрок 1 нанёс урон в ${p2_damage} единиц.` };
+                if (game_info.users_battle_info[1].user_health <= 0) {
+                    await set_winner_func(player1.userId);
+                    result = { status: 'win', winnerId: player1.userId, damage: p1_damage, text: 'Победил Игрок 1.' };
+                } else {
+                    result = { status: 'damage', winnerId: player1.userId, damage: p1_damage, text: `Игрок 1 нанёс урон в ${p2_damage} единиц.` };
+                }
 
                 game_info.users_battle_info[0].user_ult += Number(p1_damage);
                 game_info.users_battle_info[1].user_health -= Number(p1_damage);
-
-                if (game_info.users_battle_info[1].user_health === 0) {
-                    result = { status: 'win', winnerId: player1.userId, damage: p1_damage, text: 'Победил Игрок 1.' };
-                }
             } else if (p2_damage > p1_damage) {
-                result = { status: 'damage', winnerId: player2.userId, damage: p2_damage, text: `Игрок 2 нанёс урон в ${p2_damage} единиц.` };
+                    if (game_info.users_battle_info[0].user_health <= 0) {
+                    await set_winner_func(player2.userId);
+                    result = { status: 'win', winnerId: player2.userId, damage: p2_damage, text: 'Победил Игрок 2.' };
+                } else {
+                    result = { status: 'damage', winnerId: player2.userId, damage: p2_damage, text: `Игрок 2 нанёс урон в ${p2_damage} единиц.` };
+                }
 
                 game_info.users_battle_info[1].user_ult += Number(p2_damage / 2);
                 game_info.users_battle_info[0].user_health -= Number(p2_damage / 2);
-
-                if (game_info.users_battle_info[0].user_health <= 0) {
-                    result = { status: 'win', winnerId: player2.userId, damage: p2_damage, text: 'Победил Игрок 2.' };
-                }
             } else {
-                result = { status: 'draw', text: 'Ничья! Урон одинаковый или взаимно заблокирован.' };
+                result = {
+                    status: 'draw',
+                    winnerId: null,
+                    damage: 0,
+                    text: 'Ничья! Урон одинаковый или взаимно заблокирован.'
+                }
             }
 
             if (result.status !== 'draw') {
@@ -350,7 +374,7 @@ export const GAME = async (socket: Socket) => {
         try {
             // const player_id = (socket as SocketData).playerId;
 
-            const player_info = await UsersModel.findById(player_id);
+            const player_info = await UsersModel.findById(player_id) as PlayerData;
 
             if (!player_info) return;
 
@@ -365,8 +389,8 @@ export const GAME = async (socket: Socket) => {
     socket.on("check_battle_card", async (data) => {
         const { game_key, player_id, card_id, menu_id, enemy_id } = data;
         try {
-            const game_info = await GamesModel.findOne({ game_key: game_key });
-            const player_info = await UsersModel.findById(player_id);
+            const game_info = await GamesModel.findOne({ game_key: game_key }) as GameData;
+            const player_info = await UsersModel.findById(player_id) as PlayerData;
 
             const playerIndex = game_info.users_battle_info.findIndex(p => p._id.toString() === player_id);
             const player_cards_length = game_info.users_battle_info[playerIndex].user_cards.battle_cards.length;
@@ -425,7 +449,7 @@ export const GAME = async (socket: Socket) => {
     socket.on("clear_game_cards", async (data) => {
         const { game_key, player_id } = data;
         try {
-            const game_info = await GamesModel.findOne({ game_key: game_key });
+            const game_info = await GamesModel.findOne({ game_key: game_key }) as GameData;
 
             if (!game_info || !game_info.users_battle_info) {
                 return socket.emit({ message: "Game session not found" });
@@ -608,7 +632,7 @@ export const GAME = async (socket: Socket) => {
             game_find_player.user_cards.battle_cards.splice(cardIndex, 1);
             // isCardSelected = card_to_change.toString();
 
-            await game_info.save();
+            // await game_info.save();
 
             // if (game_info.game_type === "player_bot") return;
 
@@ -627,6 +651,8 @@ export const GAME = async (socket: Socket) => {
 
                 await start_cooldown_func(socket, gameId, game_info.game_key, 10);
             }
+
+            await game_info.save();
         } catch (err) {
             console.log('err', err);
         }

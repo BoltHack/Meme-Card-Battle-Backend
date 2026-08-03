@@ -152,7 +152,6 @@ class AdminController_Post {
 
             await user_info.save();
 
-
             return res.status(200).json({ success: "Карта успешно выдана!" });
         } catch (err) {
             console.error('Ошибка в CreateCardPost:', err);

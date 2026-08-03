@@ -122,7 +122,8 @@ class ViewController {
                 }
             });
 
-            const cards_count = quantityArray?.reduce((acc, card) => acc + card, 0)
+            const cards_count = quantityArray?.reduce((acc, card) => acc + card, 0);
+            // const power_count = renderData?.map(card => card.power_slot * card.card_quantity).reduce((acc, card) => acc + card, 0);
 
             return res.status(200).json({
                 id: user?.id || "",
@@ -134,6 +135,7 @@ class ViewController {
                     coins: user_info.coins,
                 },
                 cards_count: cards_count || 0,
+                // power_count: power_count || 0,
                 renderData: renderData.length > 0 ? renderData : null
             })
         } catch (err) {
