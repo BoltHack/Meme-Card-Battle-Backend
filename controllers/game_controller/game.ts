@@ -194,8 +194,6 @@ export const GAME = async (socket: Socket) => {
             const cards = await CardsModel.find({ _id: { $in: cardIds } });
             const cardsMap = new Map(cards.map(c => [c._id.toString(), c]));
 
-            console.log('cardsMap', cardsMap);
-
             const players_damage_info = game_info.users_battle_info.map((ubi) => {
                 const card_info = cardsMap.get(ubi.user_cards.select_card?.toString());
                 return {
@@ -228,25 +226,25 @@ export const GAME = async (socket: Socket) => {
             }
 
             if (p1_damage > p2_damage) {
+                game_info.users_battle_info[0].user_ult += Number(p1_damage);
+                game_info.users_battle_info[1].user_health -= Number(p1_damage);
+
                 if (game_info.users_battle_info[1].user_health <= 0) {
                     await set_winner_func(player1.userId);
                     result = { status: 'win', winnerId: player1.userId, damage: p1_damage, text: 'Победил Игрок 1.' };
                 } else {
                     result = { status: 'damage', winnerId: player1.userId, damage: p1_damage, text: `Игрок 1 нанёс урон в ${p2_damage} единиц.` };
                 }
-
-                game_info.users_battle_info[0].user_ult += Number(p1_damage);
-                game_info.users_battle_info[1].user_health -= Number(p1_damage);
             } else if (p2_damage > p1_damage) {
-                    if (game_info.users_battle_info[0].user_health <= 0) {
+                game_info.users_battle_info[1].user_ult += Number(p2_damage / 2);
+                game_info.users_battle_info[0].user_health -= Number(p2_damage / 2);
+
+                if (game_info.users_battle_info[0].user_health <= 0) {
                     await set_winner_func(player2.userId);
                     result = { status: 'win', winnerId: player2.userId, damage: p2_damage, text: 'Победил Игрок 2.' };
                 } else {
                     result = { status: 'damage', winnerId: player2.userId, damage: p2_damage, text: `Игрок 2 нанёс урон в ${p2_damage} единиц.` };
                 }
-
-                game_info.users_battle_info[1].user_ult += Number(p2_damage / 2);
-                game_info.users_battle_info[0].user_health -= Number(p2_damage / 2);
             } else {
                 result = {
                     status: 'draw',
@@ -632,7 +630,7 @@ export const GAME = async (socket: Socket) => {
             game_find_player.user_cards.battle_cards.splice(cardIndex, 1);
             // isCardSelected = card_to_change.toString();
 
-            // await game_info.save();
+            await game_info.save();
 
             // if (game_info.game_type === "player_bot") return;
 
@@ -652,7 +650,7 @@ export const GAME = async (socket: Socket) => {
                 await start_cooldown_func(socket, gameId, game_info.game_key, 10);
             }
 
-            await game_info.save();
+            // await game_info.save();
         } catch (err) {
             console.log('err', err);
         }
