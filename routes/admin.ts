@@ -12,12 +12,15 @@ const admin = express.Router();
 admin.get('/panel', authenticateJWT, verifyPermissions("Admin"), PageRender("auth"));
 admin.get('/team', authenticateJWT, verifyPermissions("Admin"), AdminController_View.TeamView);
 
-admin.get('/create/card', authenticateJWT, verifyPermissions("Admin"), PageRender("auth"));
-admin.get('/create/blog', authenticateJWT, verifyPermissions("Admin"), PageRender("auth"));
-admin.get('/edit/blog/:blog_id', authenticateJWT, verifyPermissions("Admin"), AdminController_View.EditBlogView);
+admin.get('/card/create', authenticateJWT, verifyPermissions("Admin"), PageRender("auth"));
+admin.get('/blog/create', authenticateJWT, verifyPermissions("Admin"), PageRender("auth"));
+admin.get('/blog/:blog_id/edit', authenticateJWT, verifyPermissions("Admin"), AdminController_View.EditBlogView);
 
-admin.post('/add/card', authenticateJWT, verifyPermissions("Admin"), AdminController_Post.CreateCardPost);
-admin.post('/add/blog', authenticateJWT, verifyPermissions("Admin"), AdminController_Post.BlogRedactionPost);
+admin.post('/card/create', authenticateJWT, verifyPermissions("Admin"), AdminController_Post.CreateCardPost);
+
+admin.post('/blog/create', authenticateJWT, verifyPermissions("Admin"), AdminController_Post.BlogRedactionPost("create"));
+admin.post('/blog/:blog_id/edit', authenticateJWT, verifyPermissions("Admin"), AdminController_Post.BlogRedactionPost("edit"));
+admin.post('/blog/:blog_id/delete', authenticateJWT, verifyPermissions("Admin"), AdminController_Post.RemoveBlogPost);
 
 admin.post('/get-random-card', verifyPermissions("Admin"), authenticateJWT, AdminController_Post.GetRandomCardPost);
 

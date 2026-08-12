@@ -3,45 +3,19 @@ import path from "path";
 import fs from "fs";
 import mongoose from "mongoose";
 import crypto from "crypto";
-// import escapeHtml from "escape-html";
 import he from "he";
-
-// function cleanTextRegex(dirtyInput) {
-//     const decoded = he.decode(dirtyInput);
-//
-//     return decoded.replace(/<\/?[^>]+(>|$)/g, '');
-// }
-
-function cleanTextRegex(dirtyInput) {
-    if (typeof dirtyInput !== 'string') return dirtyInput;
-
-    // 1. Декодируем сущности (dfg&lt;/div превращается в dfg</div>)
-    const decoded = he.decode(dirtyInput);
-
-    // 2. Удаляем только HTML-теги.
-    // Символы \n при этом полностью сохраняются.
-    return decoded.replace(/<\/?[^>]+(>|$)/g, '');
-}
 
 import UsersModel from "../../models/UsersModel";
 import CardsModel from "../../models/CardsModel";
 import BlogsModel from "../../models/BlogsModel";
 
-// function cleanEditorContent(content: string): string {
-//     let decoded = he.decode(content);
-//
-//     const options = {
-//         whiteList: {
-//             p: [], ul: [], li: [], ol: [], b: [], i: [], u: [],
-//             strong: [], h1: [], h2: [], h3: [], h4: [], h5: [], h6: [],
-//             em: [], br: [],
-//             a: ["href", "target"],
-//             img: ["src", "alt"]
-//         }
-//     };
-//
-//     return filterXSS(decoded, options);
-// }
+function cleanTextRegex(dirtyInput) {
+    if (typeof dirtyInput !== 'string') return dirtyInput;
+
+    const decoded = he.decode(dirtyInput);
+
+    return decoded.replace(/<\/?[^>]+(>|$)/g, '');
+}
 
 const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp'];
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -61,6 +35,10 @@ interface CustomRequest extends Request {
 class AdminController_Post {
     static CreateCardPost = async (req: CustomRequest, res: Response, next: NextFunction) => {
         try {
+            const user = req.user;
+
+            if (!user || user.role !== "Admin") return;
+
             const { card_name, card_description, card_damage, card_protection, lvl_number, lvl_name } = req.body;
 
             const card_id = new mongoose.Types.ObjectId();
@@ -129,6 +107,8 @@ class AdminController_Post {
         try {
             const user = req.user;
 
+            if (!user || user.role !== "Admin") return;
+
             const user_info = await UsersModel.findById(user.id);
             if (!user_info) return res.status(404).json({ error: "Игрок не найден" });
 
@@ -161,65 +141,137 @@ class AdminController_Post {
         }
     }
 
-    static BlogRedactionPost = async (req: CustomRequest, res: Response, next: NextFunction) => {
+    static BlogRedactionPost = (blog_redaction_type: "create" | "edit") => {
+        return async (req: CustomRequest, res: Response, next: NextFunction) => {
+            try {
+                const { post_title, post_description, post_category, content, post_cover } = req.body;
+                const user = req.user;
+
+                if (!user || user.role !== "Admin") return;
+
+                let blogIdString: string;
+                let blog_info: any;
+
+                if (blog_redaction_type === "edit") {
+                    const { blog_id } = req.params;
+
+                    blog_info = await BlogsModel.findById(blog_id);
+
+                    if (!blog_info || !blog_id) return;
+
+                    blogIdString = blog_id;
+                } else if (blog_redaction_type === "create") {
+                    blogIdString = new mongoose.Types.ObjectId();
+                } else {
+                    console.log("Ошибка записи данных.");
+                }
+
+                let imagePath = "";
+
+                if (req.files && req.files.post_cover && req.files.post_cover?.size > 819) {
+                    const imageFile = Array.isArray(req.files.post_cover)
+                        ? req.files.post_cover[0]
+                        : req.files.post_cover;
+
+                    const fileExt = path.extname(imageFile.name);
+
+                    if (!ALLOWED_EXTENSIONS.includes(fileExt)) {
+                        return res.status(400).json({ error: "Недопустимый формат файла. Разрешены только изображения." });
+                    }
+
+                    if (imageFile.size > MAX_FILE_SIZE) {
+                        return res.status(400).json({ error: "Размер файла не должен превышать 5 МБ." });
+                    }
+
+                    const safeFileName = `${blogIdString.toString()}-${crypto.randomUUID()}${fileExt}`;
+
+                    imagePath = `uploads/BlogCovers/${blogIdString.toString()}/${safeFileName}`;
+
+                    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'BlogCovers', blogIdString.toString());
+                    const savePath = path.join(uploadDir, safeFileName);
+
+                    if (!fs.existsSync(uploadDir)) {
+                        fs.mkdirSync(uploadDir, {recursive: true});
+                    }
+
+                    await imageFile.mv(savePath);
+                }
+
+                if (blog_redaction_type === "create") {
+                    await BlogsModel.create({
+                        _id: blogIdString,
+                        author: {
+                            id: user.id,
+                            name: user.name
+                        },
+                        main_content: {
+                            title: post_title,
+                            description: post_description,
+                            cover: imagePath
+                        },
+                        category: post_category,
+                        content: cleanTextRegex(content)
+                    });
+
+                    return res.status(200).json({ success: "Статья успешно добавлена!" });
+                } else if (blog_redaction_type === "edit") {
+                    blog_info.main_content.title = post_title
+                    blog_info.main_content.description = post_description
+                    blog_info.main_content.category = post_category
+
+                    console.log('file size', req.files?.post_cover?.size);
+
+                    if (imagePath && req.files?.post_cover?.size > 819) {
+                        blog_info.main_content.cover = imagePath;
+                    }
+                    if (post_cover && post_cover === "true") {
+                        blog_info.main_content.cover = "";
+                    }
+                    if (content) {
+                        blog_info.content = cleanTextRegex(content)
+                    }
+
+
+                    await blog_info.save();
+
+                    return res.status(200).json({ success: "Статья успешно изменена!" });
+                } else {
+                    console.log("Ошибка сохранения данных.");
+                }
+
+            } catch (err) {
+                console.error('Ошибка в blogRedactionPost:', err);
+                const errorMessage = err instanceof Error ? err.message : 'Неизвестная ошибка';
+                return res.status(500).json({error: errorMessage});
+
+            }
+        }
+    }
+
+    static RemoveBlogPost = async (req: CustomRequest, res: Response, next: NextFunction) => {
         try {
-            const { post_title, post_description, post_category, content } = req.body;
+            const { blog_id } = req.params;
             const user = req.user;
 
-            console.log('post_title', post_title);
-            console.log('post_description', post_description);
-            console.log('post_category', post_category);
-            console.log('content', content);
+            if (!user || user.role !== "Admin") return;
 
-            const blog_id = new mongoose.Types.ObjectId();
-            const blogIdString = blog_id.toString();
-            let imagePath = "";
+            const blog_updated = await BlogsModel.findById(blog_id);
 
-            if (req.files && req.files.post_cover) {
-                const imageFile = Array.isArray(req.files.post_cover)
-                    ? req.files.post_cover[0]
-                    : req.files.post_cover;
+            if (!blog_updated) return;
 
-                const fileExt = path.extname(imageFile.name);
+            const filePath = path.join(process.cwd(), 'public', 'uploads', 'BlogCovers', blog_updated.id.toString());
 
-                if (!ALLOWED_EXTENSIONS.includes(fileExt)) {
-                    return res.status(400).json({ error: "Недопустимый формат файла. Разрешены только изображения." });
+            fs.rm(filePath, { recursive: true, force: true }, (err) => {
+                if (err) {
+                    console.error('Ошибка при удалении папки:', err);
+                    return;
                 }
-
-                if (imageFile.size > MAX_FILE_SIZE) {
-                    return res.status(400).json({ error: "Размер файла не должен превышать 5 МБ." });
-                }
-
-                const safeFileName = `${blogIdString}-${crypto.randomUUID()}${fileExt}`;
-
-                imagePath = `uploads/BlogCovers/${blogIdString}/${safeFileName}`;
-
-                const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'BlogCovers', blogIdString);
-                const savePath = path.join(uploadDir, safeFileName);
-
-                if (!fs.existsSync(uploadDir)) {
-                    fs.mkdirSync(uploadDir, {recursive: true});
-                }
-
-                await imageFile.mv(savePath);
-            }
-
-            const newBlog = await BlogsModel.create({
-                author: {
-                    id: user.id,
-                    name: user.name
-                },
-                main_content: {
-                    title: post_title,
-                    description: post_description,
-                    cover: imagePath
-                },
-                category: post_category,
-                content: cleanTextRegex(content)
+                console.log('Папка успешно удалена');
             });
 
-            return res.status(200).json({ success: "Статья успешно добавлена!" });
+            await blog_updated.deleteOne();
 
+            return res.status(200).json({ success: "Публикация успешно удалена!" });
         } catch (err) {
             console.error('Ошибка в blogRedactionPost:', err);
             const errorMessage = err instanceof Error ? err.message : 'Неизвестная ошибка';
@@ -227,7 +279,6 @@ class AdminController_Post {
 
         }
     }
-
 }
 
 export default AdminController_Post;
