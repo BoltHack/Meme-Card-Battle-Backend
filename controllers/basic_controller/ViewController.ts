@@ -8,7 +8,7 @@ import GamesModel from "../../models/GamesModel";
 import CardsModel from "../../models/CardsModel";
 import UsersModel from "../../models/UsersModel";
 import BlogsModel from "../../models/BlogsModel";
-import mongoose from "mongoose";
+import mongoose, {Types} from "mongoose";
 
 interface UserData {
     id: string;
@@ -22,8 +22,40 @@ interface CustomRequest extends Request {
     user?: UserData;
     basicData: BasicData;
 }
-interface UserMongooseData {
-    users_battle_info: object;
+interface GameInfo {
+    game_type: string;
+    users_battle_info: {
+        _id: Types.ObjectId;
+    }[];
+}
+interface User {
+    id: string;
+    name: string;
+    role: string;
+}
+
+interface IUser extends Document {
+    id: string;
+    lvl: number;
+    money: number;
+    coins: number;
+    myCards: {
+        card_id: Types.ObjectId;
+        quantity: number;
+    }[];
+}
+
+interface BlogData {
+    author: {
+        id: string;
+        name: string;
+    },
+    isVisibility: boolean;
+    main_content: {
+        title: string;
+        description: string;
+        cover: string;
+    }
 }
 class ViewController {
     static ReadPage_docs = (setFilePath: string) => {
@@ -78,14 +110,14 @@ class ViewController {
     static MyCardsView = async (req: CustomRequest, res: Response, next: NextFunction) => {
         try {
             const { cards_category } = req.params;
-            const user = req.user;
+            const user = req.user as User;
             const user_info = await UsersModel.findById(user.id);
 
             if (!user_info) {
                 return res.status(404).json({ error: 'Пользователь не найден в базе данных' });
             }
 
-            const user_cards = user_info.myCards || [];
+            const user_cards = (user_info as IUser)?.myCards || [];
 
             const cardsArray = user_cards.map(card => card.card_id);
             const quantityArray = user_cards.map(card => card.quantity);
@@ -100,7 +132,7 @@ class ViewController {
 
             const get_cards = await CardsModel.find(cardQuery);
 
-            const renderData = get_cards.map(cards => {
+            const renderData = (get_cards as IUser)?.map(cards => {
                 const cardIdStr = cards._id.toString();
 
                 const matched_quantity = user_cards.find(c => c.card_id?.toString() === cardIdStr);
@@ -118,7 +150,6 @@ class ViewController {
                     card_avatar: cards.card_avatar,
                     power_slot: cards.power_slot,
                     card_quantity: quantity,
-                    power_slot: cards.power_slot
                 }
             });
 
@@ -130,14 +161,13 @@ class ViewController {
                 name: user?.name || "",
                 role: user?.role || "",
                 stats: {
-                    lvl: user_info.lvl,
-                    money: user_info.money,
-                    coins: user_info.coins,
+                    lvl: user_info?.lvl,
+                    money: user_info?.money,
+                    coins: user_info?.coins,
                 },
                 cards_count: cards_count || 0,
-                // power_count: power_count || 0,
                 renderData: renderData.length > 0 ? renderData : null
-            })
+            }) as IUser;
         } catch (err) {
             console.error('Ошибка:', err);
             const errorMessage = err instanceof Error ? err.message : 'Неизвестная ошибка';
@@ -160,12 +190,12 @@ class ViewController {
                 return res.status(404).json({ error: errorMsg });
             }
 
-            if (game.game_type.toString() !== game_type.toString()) {
+            if ((game as GameInfo)?.game_type.toString() !== game_type.toString()) {
                 return res.status(404).json({ error: errorMsg });
             }
 
-            const player_info = game.users_battle_info.find(u => u._id.toString() === user.id) as UserMongooseData;
-            const enemy_info = game.users_battle_info.find(u => u._id.toString() !== user.id) as UserMongooseData;
+            const player_info = (game as GameInfo)?.users_battle_info.find(u => u._id.toString() === user.id);
+            const enemy_info = (game as GameInfo)?.users_battle_info.find(u => u._id.toString() !== user.id);
 
             if (
                 game_type === "player_player" && !player_info ||
@@ -175,8 +205,8 @@ class ViewController {
                 return res.status(404).json({ error: errorMsg });
             }
 
-            const user_cards = user_info.myCards.map(uc => uc.quantity);
-            const user_cards_count = user_cards.reduce((acc, curr) => acc + curr, 0);
+            const user_cards = (user_info as IUser)?.myCards.map(uc => uc.quantity);
+            const user_cards_count = (user_cards as number[])?.reduce((acc, curr) => acc + curr, 0);
 
             if (user_cards_count < 8) {
                 return res.status(403).json({ error: "У вас недостаточно карт, чтобы начать игру." });
@@ -296,35 +326,35 @@ class ViewController {
 
     static BlogReadView = async (req: CustomRequest, res: Response, next: NextFunction) => {
         try {
-            const { blog_id } = req.params;
+            const { blog_id } = req.params as string;
 
             const errorMsg = "Страница не найдена."
 
-            if (!mongoose.Types.ObjectId.isValid(blog_id)) {
+            if (!blog_id || !mongoose.Types.ObjectId.isValid(blog_id)) {
                 return res.status(404).json({ error: errorMsg });
             }
 
             const blogRead = await BlogsModel.findById(blog_id);
 
-            if (!blogRead || blogRead.isVisibility === false) {
+            if (!blogRead || (blogRead as BlogData)?.isVisibility === false) {
                 return res.status(404).json({ error: errorMsg });
             }
 
-            if (!blogRead.main_content || !blogRead.main_content.description) {
+            if (!(blogRead as BlogData)?.main_content || !(blogRead as BlogData)?.main_content.description) {
                 return res.status(404).json({ error: errorMsg });
             }
 
             const renderData = {
                 author: {
-                    id: blogRead.author?.id,
-                    name: blogRead.author?.name
+                    id: blogRead?.author?.id as BlogData,
+                    name: blogRead?.author?.name as BlogData
                 },
-                title: blogRead.main_content?.title,
-                description: blogRead.main_content?.description,
-                cover: blogRead.main_content?.cover,
-                category: blogRead.category,
-                date: blogRead.date,
-                content: blogRead.content
+                title: blogRead?.main_content?.title as BlogData,
+                description: blogRead?.main_content?.description as BlogData,
+                cover: blogRead?.main_content?.cover as BlogData,
+                category: blogRead?.category as BlogData,
+                date: blogRead?.date as BlogData,
+                content: blogRead?.content as BlogData
             }
 
             return PageRender_v2("no_auth", renderData)(req, res, next);

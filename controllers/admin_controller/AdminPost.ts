@@ -217,7 +217,7 @@ class AdminController_Post {
                 } else if (blog_redaction_type === "edit") {
                     blog_info.main_content.title = post_title
                     blog_info.main_content.description = post_description
-                    blog_info.main_content.category = post_category
+                    blog_info.category = post_category
 
                     console.log('file size', req.files?.post_cover?.size);
 
@@ -230,7 +230,6 @@ class AdminController_Post {
                     if (content) {
                         blog_info.content = cleanTextRegex(content)
                     }
-
 
                     await blog_info.save();
 
