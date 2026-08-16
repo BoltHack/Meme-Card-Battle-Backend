@@ -5,6 +5,7 @@ import mongoose from "mongoose";
 import BlogsModel from "../../models/BlogsModel";
 import UsersModel from "../../models/UsersModel";
 import { PageRender_v2 } from "../../middlewares/PageRender";
+import CardsModel from "../../models/CardsModel";
 
 interface UserData {
     id: string;
@@ -75,6 +76,40 @@ class AdminController_View {
 
             // return res.status(200).json({ success: "123"});
 
+            return PageRender_v2("auth", renderData)(req, res, next);
+        } catch (err) {
+            console.error('Ошибка:', err);
+            return res.status(500).json({ error: "Внутренняя ошибка сервера" });
+        }
+    }
+
+    static CardListView = async (req: CustomRequest, res: Response, next: NextFunction) => {
+        try {
+            const { cards_category } = req.params;
+
+            const cardQuery = {}
+
+            if (cards_category !== 'all') {
+                cardQuery["card_lvl_info.lvl_name"] = String(cards_category).toUpperCase();
+            }
+
+            const allCards = await CardsModel.find(cardQuery);
+
+            const cardsData = allCards.map(card => ({
+                card_id: card._id.toString(),
+                card_name: card.card_name,
+                card_avatar: card.card_avatar,
+                card_description: card.card_description,
+                card_damage: card.card_stats.card_damage,
+                card_protection: card.card_stats.card_protection,
+                lvl_number: card.card_lvl_info.lvl_number,
+                lvl_name: card.card_lvl_info.lvl_name,
+                power_slot: card.power_slot
+            }));
+
+            const renderData = {
+                card: cardsData,
+            }
             return PageRender_v2("auth", renderData)(req, res, next);
         } catch (err) {
             console.error('Ошибка:', err);

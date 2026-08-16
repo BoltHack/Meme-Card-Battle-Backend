@@ -39,7 +39,7 @@ class AdminController_Post {
 
             if (!user || user.role !== "Admin") return;
 
-            const { card_name, card_description, card_damage, card_protection, lvl_number, lvl_name } = req.body;
+            const { card_name, card_description, card_damage, card_protection, lvl_number, lvl_name, power_slot } = req.body;
 
             const card_id = new mongoose.Types.ObjectId();
             const cardIdString = card_id.toString();
@@ -87,7 +87,8 @@ class AdminController_Post {
                 card_lvl_info: {
                     lvl_number: Number(lvl_number) || 1,
                     lvl_name: lvl_name
-                }
+                },
+                power_slot: power_slot
             });
 
             return res.status(200).json({

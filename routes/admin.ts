@@ -12,6 +12,7 @@ const admin = express.Router();
 admin.get('/panel', authenticateJWT, verifyPermissions("Admin"), PageRender("auth"));
 admin.get('/team', authenticateJWT, verifyPermissions("Admin"), AdminController_View.TeamView);
 
+admin.get('/card/list/:cards_category', authenticateJWT, verifyPermissions("Admin"), AdminController_View.CardListView);
 admin.get('/card/create', authenticateJWT, verifyPermissions("Admin"), PageRender("auth"));
 admin.get('/blog/create', authenticateJWT, verifyPermissions("Admin"), PageRender("auth"));
 admin.get('/blog/:blog_id/edit', authenticateJWT, verifyPermissions("Admin"), AdminController_View.EditBlogView);
