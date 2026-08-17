@@ -104,6 +104,38 @@ class AdminController_Post {
         }
     }
 
+    static RemoveCardPost = async (req: CustomRequest, res: Response, next: NextFunction) => {
+        try {
+            const { card_id } = req.params;
+            const user = req.user;
+
+            if (!user || user.role !== "Admin") return;
+
+            const card_updated = await CardsModel.findById(card_id);
+
+            if (!card_updated) return;
+
+            const filePath = path.join(process.cwd(), 'public', 'uploads', 'CardCovers', card_updated.id.toString());
+
+            fs.rm(filePath, { recursive: true, force: true }, (err) => {
+                if (err) {
+                    console.error('Ошибка при удалении папки:', err);
+                    return;
+                }
+                console.log('Папка успешно удалена');
+            });
+
+            await card_updated.deleteOne();
+
+            return res.status(200).json({ success: "Карта успешно удалена!" });
+        } catch (err) {
+            console.error('Ошибка в cardRedactionPost:', err);
+            const errorMessage = err instanceof Error ? err.message : 'Неизвестная ошибка';
+            return res.status(500).json({error: errorMessage});
+
+        }
+    }
+
     static GetRandomCardPost = async (req: CustomRequest, res: Response, next: NextFunction) => {
         try {
             const user = req.user;

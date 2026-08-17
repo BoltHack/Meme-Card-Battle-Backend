@@ -18,6 +18,7 @@ admin.get('/blog/create', authenticateJWT, verifyPermissions("Admin"), PageRende
 admin.get('/blog/:blog_id/edit', authenticateJWT, verifyPermissions("Admin"), AdminController_View.EditBlogView);
 
 admin.post('/card/create', authenticateJWT, verifyPermissions("Admin"), AdminController_Post.CreateCardPost);
+admin.post('/card/:card_id/delete', authenticateJWT, verifyPermissions("Admin"), AdminController_Post.RemoveCardPost);
 
 admin.post('/blog/create', authenticateJWT, verifyPermissions("Admin"), AdminController_Post.BlogRedactionPost("create"));
 admin.post('/blog/:blog_id/edit', authenticateJWT, verifyPermissions("Admin"), AdminController_Post.BlogRedactionPost("edit"));
