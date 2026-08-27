@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
-import fs from 'fs';
-import path from 'path';
+import fs from "fs";
+import path from "path";
 
 import { PageRender_v2 } from "../../middlewares/PageRender";
 
@@ -8,362 +8,407 @@ import GamesModel from "../../models/GamesModel";
 import CardsModel from "../../models/CardsModel";
 import UsersModel from "../../models/UsersModel";
 import BlogsModel from "../../models/BlogsModel";
-import mongoose, {Types} from "mongoose";
+import mongoose, { Types } from "mongoose";
 
 interface UserData {
-    id: string;
-    name: string;
-    role: string;
+  id: string;
+  name: string;
+  role: string;
 }
 interface BasicData {
-    locale: string;
+  locale: string;
 }
 interface CustomRequest extends Request {
-    user?: UserData;
-    basicData: BasicData;
+  user?: UserData;
+  basicData: BasicData;
 }
 interface GameInfo {
-    game_type: string;
-    users_battle_info: {
-        _id: Types.ObjectId;
-    }[];
+  game_type: string;
+  users_battle_info: {
+    _id: Types.ObjectId;
+  }[];
 }
 interface User {
-    id: string;
-    name: string;
-    role: string;
+  id: string;
+  name: string;
+  role: string;
 }
 
 interface IUser extends Document {
-    id: string;
-    lvl: number;
-    money: number;
-    coins: number;
-    myCards: {
-        card_id: Types.ObjectId;
-        quantity: number;
-    }[];
+  id: string;
+  lvl: number;
+  money: number;
+  coins: number;
+  myCards: {
+    card_id: Types.ObjectId;
+    quantity: number;
+  }[];
 }
 
 interface BlogData {
-    author: {
-        id: string;
-        name: string;
-    },
-    isVisibility: boolean;
-    main_content: {
-        title: string;
-        description: string;
-        cover: string;
-    }
+  author: {
+    id: string;
+    name: string;
+  };
+  isVisibility: boolean;
+  main_content: {
+    title: string;
+    description: string;
+    cover: string;
+  };
 }
 class ViewController {
-    static ReadPage_docs = (setFilePath: string) => {
-        return async (req: CustomRequest, res: Response, next: NextFunction) => {
-            try {
-                const filePath = path.join(process.cwd(), 'data', 'docs', `${setFilePath}.md`);
+  static ReadPage_docs = (setFilePath: string) => {
+    return async (req: CustomRequest, res: Response, next: NextFunction) => {
+      try {
+        const filePath = path.join(
+          process.cwd(),
+          "data",
+          "docs",
+          `${setFilePath}.md`,
+        );
 
-                if (!fs.existsSync(filePath)) {
-                    return res.status(404).json({ error: 'Страница не найдена' });
-                }
-
-                // const content = fs.readFileSync(filePath, 'utf8');
-                const content = await fs.promises.readFile(filePath, 'utf8');
-
-                // return res.status(200).json({
-                //     content: content,
-                // });
-                return PageRender_v2("no_auth", content)(req, res, next);
-            } catch (err) {
-                console.error('Ошибка:', err);
-                const errorMessage = err instanceof Error ? err.message : 'Неизвестная ошибка';
-                return res.status(500).json({ error: errorMessage });
-            }
+        if (!fs.existsSync(filePath)) {
+          return res.status(404).json({ error: "Страница не найдена" });
         }
-    }
 
-    static ReadPage_json = (setFilePath: string) => {
-        return async (req: CustomRequest, res: Response, next: NextFunction) => {
-            try {
-                const filePath = path.join(process.cwd(), 'data', 'json', `${setFilePath}.json`);
+        // const content = fs.readFileSync(filePath, 'utf8');
+        const content = await fs.promises.readFile(filePath, "utf8");
 
-                if (!fs.existsSync(filePath)) {
-                    return res.status(404).json({ error: 'Страница не найдена' });
-                }
+        // return res.status(200).json({
+        //     content: content,
+        // });
+        return PageRender_v2("no_auth", content)(req, res, next);
+      } catch (err) {
+        console.error("Ошибка:", err);
+        const errorMessage =
+          err instanceof Error ? err.message : "Неизвестная ошибка";
+        return res.status(500).json({ error: errorMessage });
+      }
+    };
+  };
 
-                const fileContent = await fs.promises.readFile(filePath, 'utf8');
+  static ReadPage_json = (setFilePath: string) => {
+    return async (req: CustomRequest, res: Response, next: NextFunction) => {
+      try {
+        const filePath = path.join(
+          process.cwd(),
+          "data",
+          "json",
+          `${setFilePath}.json`,
+        );
 
-                const content = JSON.parse(fileContent);
-
-                // return res.status(200).json({
-                //     categories: categoryData || "",
-                // });
-                return PageRender_v2("no_auth", content)(req, res, next);
-            } catch (err) {
-                console.error('Ошибка:', err);
-                const errorMessage = err instanceof Error ? err.message : 'Неизвестная ошибка';
-                return res.status(500).json({ error: errorMessage });
-            }
+        if (!fs.existsSync(filePath)) {
+          return res.status(404).json({ error: "Страница не найдена" });
         }
+
+        const fileContent = await fs.promises.readFile(filePath, "utf8");
+
+        const content = JSON.parse(fileContent);
+
+        // return res.status(200).json({
+        //     categories: categoryData || "",
+        // });
+        return PageRender_v2("no_auth", content)(req, res, next);
+      } catch (err) {
+        console.error("Ошибка:", err);
+        const errorMessage =
+          err instanceof Error ? err.message : "Неизвестная ошибка";
+        return res.status(500).json({ error: errorMessage });
+      }
+    };
+  };
+
+  static ProfileView = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { cards_category } = req.params;
+      const user = req.user as User;
+      const user_info = await UsersModel.findById(user.id);
+
+      if (!user_info) {
+        return res
+          .status(404)
+          .json({ error: "Пользователь не найден в базе данных" });
+      }
+
+      const user_cards = (user_info as IUser)?.myCards || [];
+
+      const cardsArray = user_cards.map((card) => card.card_id);
+      const quantityArray = user_cards.map((card) => card.quantity);
+
+      const cardQuery: Record<string, any> = {
+        _id: { $in: cardsArray },
+      };
+
+      if (cards_category !== "all") {
+        cardQuery["card_lvl_info.lvl_name"] =
+          String(cards_category).toUpperCase();
+      }
+
+      const get_cards = await CardsModel.find(cardQuery);
+
+      const renderData = (get_cards as IUser)?.map((cards) => {
+        const cardIdStr = cards._id.toString();
+
+        const matched_quantity = user_cards.find(
+          (c) => c.card_id?.toString() === cardIdStr,
+        );
+
+        const quantity = matched_quantity ? matched_quantity.quantity : null;
+
+        return {
+          card_id: cards._id.toString(),
+          card_damage: cards.card_stats.card_damage,
+          card_protection: cards.card_stats.card_protection,
+          lvl_number: cards.card_lvl_info.lvl_number,
+          lvl_name: cards.card_lvl_info.lvl_name,
+          card_name: cards.card_name,
+          card_description: cards.card_description,
+          card_avatar: cards.card_avatar,
+          power_slot: cards.power_slot,
+          card_quantity: quantity,
+        };
+      });
+
+      const cards_count = quantityArray?.reduce((acc, card) => acc + card, 0);
+      // const power_count = renderData?.map(card => card.power_slot * card.card_quantity).reduce((acc, card) => acc + card, 0);
+
+      return res.status(200).json({
+        id: user?.id || "",
+        name: user?.name || "",
+        role: user?.role || "",
+        stats: {
+          lvl: user_info?.lvl,
+          money: user_info?.money,
+          coins: user_info?.coins,
+        },
+        cards_count: cards_count || 0,
+        renderData: renderData.length > 0 ? renderData : null,
+      }) as IUser;
+    } catch (err) {
+      console.error("Ошибка:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Неизвестная ошибка";
+      return res.status(500).json({ error: errorMessage });
     }
+  };
 
-    static MyCardsView = async (req: CustomRequest, res: Response, next: NextFunction) => {
-        try {
-            const { cards_category } = req.params;
-            const user = req.user as User;
-            const user_info = await UsersModel.findById(user.id);
+  static GameView = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { game_type, game_key } = req.params;
 
-            if (!user_info) {
-                return res.status(404).json({ error: 'Пользователь не найден в базе данных' });
-            }
+      const errorMsg =
+        req.basicData?.locale === "en" ? "Game not found." : "Игра не найдена.";
 
-            const user_cards = (user_info as IUser)?.myCards || [];
+      const user = req.user as UserData;
 
-            const cardsArray = user_cards.map(card => card.card_id);
-            const quantityArray = user_cards.map(card => card.quantity);
+      const user_info = await UsersModel.findById(user.id);
+      const game = await GamesModel.findOne({ game_key: game_key }).exec();
 
-            const cardQuery: Record<string, any> = {
-                _id: { $in: cardsArray }
-            };
+      if (!game) {
+        return res.status(404).json({ error: errorMsg });
+      }
 
-            if (cards_category !== 'all') {
-                cardQuery["card_lvl_info.lvl_name"] = String(cards_category).toUpperCase();
-            }
+      if ((game as GameInfo)?.game_type.toString() !== game_type.toString()) {
+        return res.status(404).json({ error: errorMsg });
+      }
 
-            const get_cards = await CardsModel.find(cardQuery);
+      const player_info = (game as GameInfo)?.users_battle_info.find(
+        (u) => u._id.toString() === user.id,
+      );
+      const enemy_info = (game as GameInfo)?.users_battle_info.find(
+        (u) => u._id.toString() !== user.id,
+      );
 
-            const renderData = (get_cards as IUser)?.map(cards => {
-                const cardIdStr = cards._id.toString();
+      if (
+        (game_type === "player_player" && !player_info) ||
+        (game_type === "player_player" && !enemy_info) ||
+        (game_type === "player_bot" && !player_info)
+      ) {
+        return res.status(404).json({ error: errorMsg });
+      }
 
-                const matched_quantity = user_cards.find(c => c.card_id?.toString() === cardIdStr);
+      const user_cards = (user_info as IUser)?.myCards.map((uc) => uc.quantity);
+      const user_cards_count = (user_cards as number[])?.reduce(
+        (acc, curr) => acc + curr,
+        0,
+      );
 
-                const quantity = matched_quantity ? matched_quantity.quantity : null;
+      if (user_cards_count < 8) {
+        return res
+          .status(403)
+          .json({ error: "У вас недостаточно карт, чтобы начать игру." });
+      }
 
-                return {
-                    card_id: cards._id.toString(),
-                    card_damage: cards.card_stats.card_damage,
-                    card_protection: cards.card_stats.card_protection,
-                    lvl_number: cards.card_lvl_info.lvl_number,
-                    lvl_name: cards.card_lvl_info.lvl_name,
-                    card_name: cards.card_name,
-                    card_description: cards.card_description,
-                    card_avatar: cards.card_avatar,
-                    power_slot: cards.power_slot,
-                    card_quantity: quantity,
-                }
-            });
-
-            const cards_count = quantityArray?.reduce((acc, card) => acc + card, 0);
-            // const power_count = renderData?.map(card => card.power_slot * card.card_quantity).reduce((acc, card) => acc + card, 0);
-
-            return res.status(200).json({
-                id: user?.id || "",
-                name: user?.name || "",
-                role: user?.role || "",
-                stats: {
-                    lvl: user_info?.lvl,
-                    money: user_info?.money,
-                    coins: user_info?.coins,
-                },
-                cards_count: cards_count || 0,
-                renderData: renderData.length > 0 ? renderData : null
-            }) as IUser;
-        } catch (err) {
-            console.error('Ошибка:', err);
-            const errorMessage = err instanceof Error ? err.message : 'Неизвестная ошибка';
-            return res.status(500).json({ error: errorMessage });
-        }
+      res.json({
+        id: user.id,
+        name: user.name,
+        game_key: game_key,
+        locale: req.basicData?.locale,
+      });
+    } catch (err) {
+      console.error("Ошибка:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Неизвестная ошибка";
+      return res.status(500).json({ error: errorMessage });
     }
+  };
 
-    static GameView = async (req: CustomRequest, res: Response, next: NextFunction) => {
-        try {
-            const { game_type, game_key } = req.params;
+  static BlogView = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const pageQuery = parseInt(req.query.page as string, 7);
+      const page = isNaN(pageQuery) || pageQuery < 1 ? 1 : pageQuery;
 
-            const errorMsg = req.basicData?.locale === 'en' ? 'Game not found.' : 'Игра не найдена.';
+      const limit = 7;
+      const skip = (page - 1) * limit;
 
-            const user = req.user as UserData;
+      const filteredQuery: Record<string, any> = {
+        $or: [{ isVisibility: true }, { isVisibility: { $exists: false } }],
+        "main_content.title": { $exists: true, $ne: "" },
+        "main_content.description": { $exists: true, $ne: "" },
+      };
 
-            const user_info = await UsersModel.findById(user.id);
-            const game = await GamesModel.findOne({ game_key: game_key }).exec();
+      const [allBlogs, totalBlogs] = await Promise.all([
+        BlogsModel.find(filteredQuery)
+          .sort({ date: -1 })
+          .skip(skip)
+          .limit(limit),
+        BlogsModel.countDocuments(filteredQuery),
+      ]);
 
-            if (!game) {
-                return res.status(404).json({ error: errorMsg });
-            }
+      const blogsData = allBlogs.map((blog) => ({
+        author: blog.author?.name,
+        title: blog.main_content?.title,
+        description: blog.main_content?.description,
+        cover: blog.main_content?.cover,
+        category: blog.category,
+        date: blog.date,
+        id: blog._id,
+      }));
 
-            if ((game as GameInfo)?.game_type.toString() !== game_type.toString()) {
-                return res.status(404).json({ error: errorMsg });
-            }
-
-            const player_info = (game as GameInfo)?.users_battle_info.find(u => u._id.toString() === user.id);
-            const enemy_info = (game as GameInfo)?.users_battle_info.find(u => u._id.toString() !== user.id);
-
-            if (
-                game_type === "player_player" && !player_info ||
-                game_type === "player_player" && !enemy_info ||
-                game_type === "player_bot" && !player_info
-            ) {
-                return res.status(404).json({ error: errorMsg });
-            }
-
-            const user_cards = (user_info as IUser)?.myCards.map(uc => uc.quantity);
-            const user_cards_count = (user_cards as number[])?.reduce((acc, curr) => acc + curr, 0);
-
-            if (user_cards_count < 8) {
-                return res.status(403).json({ error: "У вас недостаточно карт, чтобы начать игру." });
-            }
-
-            res.json({
-                id: user.id,
-                name: user.name,
-                game_key: game_key,
-                locale: req.basicData?.locale,
-            });
-        } catch (err) {
-            console.error('Ошибка:', err);
-            const errorMessage = err instanceof Error ? err.message : 'Неизвестная ошибка';
-            return res.status(500).json({ error: errorMessage });
-        }
+      const renderData = {
+        blog: blogsData,
+        currentPage: page,
+        totalPages: Math.max(1, Math.ceil(totalBlogs / limit)),
+      };
+      return PageRender_v2("no_auth", renderData)(req, res, next);
+    } catch (err) {
+      console.error("Ошибка:", err);
+      return res.status(500).json({ error: "Внутренняя ошибка сервера" });
     }
+  };
 
-    static BlogView = async (req: CustomRequest, res: Response, next: NextFunction) => {
-        try {
-            const pageQuery = parseInt(req.query.page as string, 7);
-            const page = isNaN(pageQuery) || pageQuery < 1 ? 1 : pageQuery;
+  static BlogCategoryView = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { blog_category } = req.params;
 
-            const limit = 7;
-            const skip = (page - 1) * limit;
+      const pageQuery = parseInt(req.query.page as string, 7);
+      const page = isNaN(pageQuery) || pageQuery < 1 ? 1 : pageQuery;
+      // const page = parseInt(req.query.page) || 1;
+      const limit = 7;
+      const skip = (page - 1) * limit;
 
-            const filteredQuery: Record<string, any> = {
-                $or: [
-                    { isVisibility: true },
-                    { isVisibility: { $exists: false } },
-                ],
-                'main_content.title': { $exists: true, $ne: "" },
-                'main_content.description': { $exists: true, $ne: "" }
-            }
+      const filteredQuery: Record<string, any> = {
+        category: blog_category,
+        $or: [{ isVisibility: true }, { isVisibility: { $exists: false } }],
+        "main_content.title": { $exists: true, $ne: "" },
+        "main_content.description": { $exists: true, $ne: "" },
+      };
 
-            const [allBlogs, totalBlogs] = await Promise.all([
-                BlogsModel.find(filteredQuery)
-                    .sort({ date: -1 })
-                    .skip(skip)
-                    .limit(limit),
-                BlogsModel.countDocuments(filteredQuery)
-            ]);
+      const [allBlogs, totalBlogs] = await Promise.all([
+        BlogsModel.find(filteredQuery)
+          .sort({ date: -1 })
+          .skip(skip)
+          .limit(limit),
+        BlogsModel.countDocuments(filteredQuery),
+      ]);
 
-            const blogsData = allBlogs.map(blog => ({
-                author: blog.author?.name,
-                title: blog.main_content?.title,
-                description: blog.main_content?.description,
-                cover: blog.main_content?.cover,
-                category: blog.category,
-                date: blog.date,
-                id: blog._id,
-            }));
+      const blogsData = allBlogs.map((blog) => ({
+        author: blog.author?.name,
+        title: blog.main_content?.title,
+        description: blog.main_content?.description,
+        cover: blog.main_content?.cover,
+        category: blog.category,
+        date: blog.date,
+        id: blog._id,
+      }));
 
-            const renderData = {
-                blog: blogsData,
-                currentPage: page,
-                totalPages: Math.max(1,  Math.ceil(totalBlogs / limit)),
-            }
-            return PageRender_v2("no_auth", renderData)(req, res, next);
-        } catch (err) {
-            console.error('Ошибка:', err);
-            return res.status(500).json({ error: "Внутренняя ошибка сервера" });
-        }
+      const renderData = {
+        blog: blogsData,
+        currentPage: page,
+        // totalPages: Math.ceil(totalBlogs / limit),
+        totalPages: Math.max(1, Math.ceil(totalBlogs / limit)),
+      };
+
+      return PageRender_v2("no_auth", renderData)(req, res, next);
+    } catch (err) {
+      console.error("Ошибка:", err);
+      return res.status(500).json({ error: "Внутренняя ошибка сервера" });
     }
+  };
 
-    static BlogCategoryView = async (req: CustomRequest, res: Response, next: NextFunction) => {
-        try {
-            const { blog_category } = req.params;
+  static BlogReadView = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { blog_id } = req.params as string;
 
-            const pageQuery = parseInt(req.query.page as string, 7);
-            const page = isNaN(pageQuery) || pageQuery < 1 ? 1 : pageQuery;
-            // const page = parseInt(req.query.page) || 1;
-            const limit = 7;
-            const skip = (page - 1) * limit;
+      const errorMsg = "Страница не найдена.";
 
-            const filteredQuery: Record<string, any> = {
-                category: blog_category,
-                $or: [
-                    { isVisibility: true },
-                    { isVisibility: { $exists: false } },
-                ],
-                'main_content.title': { $exists: true, $ne: "" },
-                'main_content.description': { $exists: true, $ne: "" }
-            };
+      if (!blog_id || !mongoose.Types.ObjectId.isValid(blog_id)) {
+        return res.status(404).json({ error: errorMsg });
+      }
 
-            const [allBlogs, totalBlogs] = await Promise.all([
-                BlogsModel.find(filteredQuery)
-                    .sort({ date: -1 })
-                    .skip(skip)
-                    .limit(limit),
-                BlogsModel.countDocuments(filteredQuery)
-            ]);
+      const blogRead = await BlogsModel.findById(blog_id);
 
-            const blogsData = allBlogs.map(blog => ({
-                author: blog.author?.name,
-                title: blog.main_content?.title,
-                description: blog.main_content?.description,
-                cover: blog.main_content?.cover,
-                category: blog.category,
-                date: blog.date,
-                id: blog._id,
-            }));
+      if (!blogRead || (blogRead as BlogData)?.isVisibility === false) {
+        return res.status(404).json({ error: errorMsg });
+      }
 
-            const renderData = {
-                blog: blogsData,
-                currentPage: page,
-                // totalPages: Math.ceil(totalBlogs / limit),
-                totalPages: Math.max(1,  Math.ceil(totalBlogs / limit)),
-            }
+      if (
+        !(blogRead as BlogData)?.main_content ||
+        !(blogRead as BlogData)?.main_content.description
+      ) {
+        return res.status(404).json({ error: errorMsg });
+      }
 
-            return PageRender_v2("no_auth", renderData)(req, res, next);
-        } catch (err) {
-            console.error('Ошибка:', err);
-            return res.status(500).json({ error: "Внутренняя ошибка сервера" });
-        }
+      const renderData = {
+        author: {
+          id: blogRead?.author?.id as BlogData,
+          name: blogRead?.author?.name as BlogData,
+        },
+        title: blogRead?.main_content?.title as BlogData,
+        description: blogRead?.main_content?.description as BlogData,
+        cover: blogRead?.main_content?.cover as BlogData,
+        category: blogRead?.category as BlogData,
+        date: blogRead?.date as BlogData,
+        content: blogRead?.content as BlogData,
+      };
+
+      return PageRender_v2("no_auth", renderData)(req, res, next);
+    } catch (err) {
+      console.error("Ошибка:", err);
+      return res.status(500).json({ error: "Внутренняя ошибка сервера" });
     }
-
-    static BlogReadView = async (req: CustomRequest, res: Response, next: NextFunction) => {
-        try {
-            const { blog_id } = req.params as string;
-
-            const errorMsg = "Страница не найдена."
-
-            if (!blog_id || !mongoose.Types.ObjectId.isValid(blog_id)) {
-                return res.status(404).json({ error: errorMsg });
-            }
-
-            const blogRead = await BlogsModel.findById(blog_id);
-
-            if (!blogRead || (blogRead as BlogData)?.isVisibility === false) {
-                return res.status(404).json({ error: errorMsg });
-            }
-
-            if (!(blogRead as BlogData)?.main_content || !(blogRead as BlogData)?.main_content.description) {
-                return res.status(404).json({ error: errorMsg });
-            }
-
-            const renderData = {
-                author: {
-                    id: blogRead?.author?.id as BlogData,
-                    name: blogRead?.author?.name as BlogData
-                },
-                title: blogRead?.main_content?.title as BlogData,
-                description: blogRead?.main_content?.description as BlogData,
-                cover: blogRead?.main_content?.cover as BlogData,
-                category: blogRead?.category as BlogData,
-                date: blogRead?.date as BlogData,
-                content: blogRead?.content as BlogData
-            }
-
-            return PageRender_v2("no_auth", renderData)(req, res, next);
-        } catch (err) {
-            console.error('Ошибка:', err);
-            return res.status(500).json({ error: "Внутренняя ошибка сервера" });
-        }
-    }
-
+  };
 }
 
 export default ViewController;
