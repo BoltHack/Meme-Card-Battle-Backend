@@ -78,10 +78,10 @@ const authenticateJWT = async (req: CustomRequest, res: Response, next: NextFunc
             return res.status(401).json({ error: 'auth error.' });
         }
 
-        const userInfo = await UsersModel.findById(decodedRefresh.id) as any;
+        const userInfo = await UsersModel.findById(decodedRefresh?.id) as any;
         const currentHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
 
-        if (!userInfo || userInfo.refreshTokenHash !== currentHash || userInfo.tokenVersion !== decodedRefresh.tokenVersion) {
+        if (!userInfo || userInfo.refreshTokenHash !== currentHash || userInfo.tokenVersion !== decodedRefresh?.tokenVersion) {
             clearAuthCookies(res);
             return res.status(403).json({ message: 'Session compromised' });
         }

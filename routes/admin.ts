@@ -11,6 +11,7 @@ const admin = express.Router();
 
 admin.get('/panel', authenticateJWT, verifyPermissions("Admin"), PageRender("auth"));
 admin.get('/team', authenticateJWT, verifyPermissions("Admin"), AdminController_View.TeamView);
+admin.get('/settings', authenticateJWT, verifyPermissions("Admin"), AdminController_View.SettingsView);
 
 admin.get('/card/list/:cards_category', authenticateJWT, verifyPermissions("Admin"), AdminController_View.CardListView);
 admin.get('/card/create', authenticateJWT, verifyPermissions("Admin"), PageRender("auth"));
@@ -23,6 +24,8 @@ admin.post('/card/:card_id/delete', authenticateJWT, verifyPermissions("Admin"),
 admin.post('/blog/create', authenticateJWT, verifyPermissions("Admin"), AdminController_Post.BlogRedactionPost("create"));
 admin.post('/blog/:blog_id/edit', authenticateJWT, verifyPermissions("Admin"), AdminController_Post.BlogRedactionPost("edit"));
 admin.post('/blog/:blog_id/delete', authenticateJWT, verifyPermissions("Admin"), AdminController_Post.RemoveBlogPost);
+
+admin.post('/settings/change', authenticateJWT, verifyPermissions("Admin"), AdminController_Post.EditSettingsPost);
 
 admin.post('/get-random-card', verifyPermissions("Admin"), authenticateJWT, AdminController_Post.GetRandomCardPost);
 

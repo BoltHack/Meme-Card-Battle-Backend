@@ -8,8 +8,9 @@ import he from "he";
 import UsersModel from "../../models/UsersModel";
 import CardsModel from "../../models/CardsModel";
 import BlogsModel from "../../models/BlogsModel";
+import AppModel from "../../models/AppModel";
 
-function cleanTextRegex(dirtyInput) {
+function cleanTextRegex(dirtyInput: string) {
     if (typeof dirtyInput !== 'string') return dirtyInput;
 
     const decoded = he.decode(dirtyInput);
@@ -311,6 +312,40 @@ class AdminController_Post {
 
         }
     }
+
+    static EditSettingsPost = async (req: CustomRequest, res: Response, next: NextFunction) => {
+        try {
+            if (!req.body || Object.keys(req.body).length === 0) {
+              return res
+                .status(400)
+                .json({ error: "Тело запроса не должно быть пустым" });
+            }
+
+            const [[key, value]] = Object.entries(req.body);
+
+            console.log(`key: ${key} value: ${value}`);
+            
+            const updatedState = await AppModel.findOneAndUpdate(
+              { _id: "global_config" },
+              { $set: { [key]: value } },
+              { new: true },
+            );
+
+            if (!updatedState) {
+                return res
+                  .status(404)
+                  .json({ error: "Конфигурация не найдена" });
+            }
+
+            return res.status(200).json({ success: "Настройка успешно изменена!" });
+        } catch (err) {
+          console.error("Ошибка в EditSettingsPost:", err);
+          const errorMessage =
+            err instanceof Error ? err.message : "Неизвестная ошибка";
+          return res.status(500).json({ error: errorMessage });
+        }
+    }
+
 }
 
 export default AdminController_Post;
