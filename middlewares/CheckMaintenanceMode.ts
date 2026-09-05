@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
 import UsersModel from "../models/UsersModel";
-import AppModel from "../models/AppModel";
+import AppModel from "../models/admin/App_GlobalConfigModel";
 
 interface UserData {
   id: string;
@@ -33,7 +33,10 @@ const CheckMaintenanceMode = async (
 ) => {
   try {
     if (req.url === "/favicon.ico" || req.method === "OPTIONS") return next();
-    const App = await AppModel.findById("global_config");
+
+    console.log("proverka");
+
+    const App = await AppModel.getSettings();
 
     if (!App?.maintenanceMode) {
       return next();

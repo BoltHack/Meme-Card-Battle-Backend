@@ -8,18 +8,20 @@ import { PageRender_v2 } from "../../middlewares/PageRender";
 import BlogsModel from "../../models/BlogsModel";
 import UsersModel from "../../models/UsersModel";
 import CardsModel from "../../models/CardsModel";
-import AppModel from "../../models/AppModel";
+
+import App_GlobalConfigModel from "../../models/admin/App_GlobalConfigModel";
+import App_CasesConfigModel from "../../models/admin/App_CasesConfigModel";
 
 interface UserData {
-    id: string;
-    name: string;
+  id: string;
+  name: string;
 }
 interface BasicData {
-    locale: string;
+  locale: string;
 }
 interface CustomRequest extends Request {
-    user?: UserData;
-    basicData: BasicData;
+  user?: UserData;
+  basicData: BasicData;
 }
 class AdminController_View {
   static EditBlogView = async (
@@ -139,7 +141,7 @@ class AdminController_View {
     next: NextFunction,
   ) => {
     try {
-      const config = await AppModel.getSettings();
+      const config = await App_GlobalConfigModel.getSettings();
 
       const renderData = config;
 
@@ -149,6 +151,65 @@ class AdminController_View {
       const errorMessage =
         err instanceof Error ? err.message : "Неизвестная ошибка";
       return res.status(500).json({ error: errorMessage });
+    }
+  };
+
+  static CaseListView = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const config = await App_CasesConfigModel.getSettings();
+
+      const renderData = config;
+
+      console.log("renderData", renderData);
+
+      return PageRender_v2("auth", renderData)(req, res, next);
+    } catch (err) {
+      console.error("Ошибка:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Неизвестная ошибка";
+      return res.status(500).json({ error: errorMessage });
+    }
+  };
+
+  static EditCaseView = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { case_id } = req.params;
+
+      const errorMsg = "Страница не найдена.";
+
+      if (!mongoose.Types.ObjectId.isValid(case_id)) {
+        return res.status(404).json({ error: errorMsg });
+      }
+
+      const case_info = await App_CasesConfigModel.findById("cases_config_app");
+
+      // const caseIndex = case_info.cases.findIndex(c => c._id.toString() === case_id.toString());
+      const caseIndex = case_info.cases.findIndex(c => c._id.toString() === case_id.toString());
+      
+      // console.log("caseIndex", caseIndex);
+
+      const case_data = case_info.cases[caseIndex];
+
+      const renderData = {
+        name: case_data.name,
+        description: case_data.description,
+        rarity: case_data.rarity,
+        price: case_data.price,
+        content: case_data.content
+      };
+
+      return PageRender_v2("auth", renderData)(req, res, next);
+    } catch (err) {
+      console.error("Ошибка:", err);
+      return res.status(500).json({ error: "Внутренняя ошибка сервера" });
     }
   };
 }
