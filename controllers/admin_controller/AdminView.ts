@@ -85,8 +85,6 @@ class AdminController_View {
       //     staffData: staffData
       // }
 
-      console.log("renderData", renderData);
-
       // return res.status(200).json({ success: "123"});
 
       return PageRender_v2("auth", renderData)(req, res, next);
@@ -164,8 +162,6 @@ class AdminController_View {
 
       const renderData = config;
 
-      console.log("renderData", renderData);
-
       return PageRender_v2("auth", renderData)(req, res, next);
     } catch (err) {
       console.error("Ошибка:", err);
@@ -175,7 +171,7 @@ class AdminController_View {
     }
   };
 
-  static EditCaseView = async (
+  static EditCaseDataView = async (
     req: CustomRequest,
     res: Response,
     next: NextFunction,
@@ -192,8 +188,10 @@ class AdminController_View {
       const case_info = await App_CasesConfigModel.findById("cases_config_app");
 
       // const caseIndex = case_info.cases.findIndex(c => c._id.toString() === case_id.toString());
-      const caseIndex = case_info.cases.findIndex(c => c._id.toString() === case_id.toString());
-      
+      const caseIndex = case_info.cases.findIndex(
+        (c) => c._id.toString() === case_id.toString(),
+      );
+
       // console.log("caseIndex", caseIndex);
 
       const case_data = case_info.cases[caseIndex];
@@ -203,7 +201,6 @@ class AdminController_View {
         description: case_data.description,
         rarity: case_data.rarity,
         price: case_data.price,
-        content: case_data.content
       };
 
       return PageRender_v2("auth", renderData)(req, res, next);
@@ -212,6 +209,64 @@ class AdminController_View {
       return res.status(500).json({ error: "Внутренняя ошибка сервера" });
     }
   };
+
+  static EditCaseContentView = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { case_id } = req.params;
+
+      const errorMsg = "Страница не найдена.";
+
+      if (!mongoose.Types.ObjectId.isValid(case_id)) {
+        return res.status(404).json({ error: errorMsg });
+      }
+
+      const case_info = await App_CasesConfigModel.findById("cases_config_app");
+
+      const caseIndex = case_info.cases.findIndex(
+        (c) => c._id.toString() === case_id.toString(),
+      );
+
+      const case_data = case_info.cases[caseIndex];
+
+      const cardIds = case_data.content.map(c => c._id.toString());
+
+      const case_cards = await CardsModel.find({ _id: { $in: cardIds } });
+
+      console.log("case_cards", case_cards);
+
+      const formattedCardsArray = case_cards.flatMap((card) => {
+        const isRandom = case_data.content.find(
+          (c) => c._id.toString() === card._id.toString(),
+        );
+        const chance = isRandom.chance;
+
+        return {
+          id: card.id,
+          name: card.card_name,
+          description: card.card_description || "",
+          avatar: card.card_avatar,
+          lvl: card.card_lvl_info?.lvl_number || 1,
+          rarity: card.card_lvl_info?.lvl_name || "Default",
+          damage: card.card_stats?.card_damage || 0,
+          protection: card.card_stats?.card_protection || 0,
+          power_slot: card.power_slot || 5,
+          chance: chance
+        };
+      });
+
+      const renderData = formattedCardsArray;
+
+      return PageRender_v2("auth", renderData)(req, res, next);
+    } catch (err) {
+      console.error("Ошибка:", err);
+      return res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    }
+  };
+  
 }
 
 export default AdminController_View;

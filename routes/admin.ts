@@ -31,10 +31,16 @@ admin.get(
   AdminController_View.CaseListView
 );
 admin.get(
-  "/case/:case_id/edit",
+  "/case/:case_id/edit/data",
   authenticateJWT,
   verifyPermissions("Admin"),
-  AdminController_View.EditCaseView,
+  AdminController_View.EditCaseDataView,
+);
+admin.get(
+  "/case/:case_id/edit/content",
+  authenticateJWT,
+  verifyPermissions("Admin"),
+  AdminController_View.EditCaseContentView,
 );
 
 admin.post('/card/create', authenticateJWT, verifyPermissions("Admin"), AdminController_Post.CreateCardPost);
@@ -51,10 +57,22 @@ admin.post(
   AdminController_Post.CreateCasePost,
 );
 admin.post(
-  "/case/:case_id/edit",
+  "/case/:case_id/edit/data",
   authenticateJWT,
   verifyPermissions("Admin"),
-  AdminController_Post.EditCasePost,
+  AdminController_Post.EditCaseDataPost,
+);
+admin.post(
+  "/case/:case_id/edit/content",
+  authenticateJWT,
+  verifyPermissions("Admin"),
+  AdminController_Post.AddNewCardPost,
+);
+admin.post(
+  "/case/:case_id/delete",
+  authenticateJWT,
+  verifyPermissions("Admin"),
+  AdminController_Post.DeleteCasePost,
 );
 
 admin.post('/settings/change', authenticateJWT, verifyPermissions("Admin"), AdminController_Post.EditSettingsPost);

@@ -170,7 +170,7 @@ class ViewController {
           card_description: cards.card_description,
           card_avatar: cards.card_avatar,
           power_slot: cards.power_slot,
-          card_quantity: quantity,
+          card_quantity: quantity
         };
       });
 
@@ -188,7 +188,7 @@ class ViewController {
         },
         cards_count: cards_count || 0,
         renderData: renderData.length > 0 ? renderData : null,
-      }) as IUser;
+      });
     } catch (err) {
       console.error("Ошибка:", err);
       const errorMessage =

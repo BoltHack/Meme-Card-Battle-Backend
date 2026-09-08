@@ -22,7 +22,7 @@ const sendMaintenanceResponse = (res: Response) => {
   res.setHeader("Expires", "0");
   return res.status(503).json({
     error:
-      "Сайт находится на техническом обслуживании. Пожалуйста, попробуйте зайти позже.",
+      "Сайт находится на техническом обслуживании. Повторите попытку позже.",
   });
 };
 

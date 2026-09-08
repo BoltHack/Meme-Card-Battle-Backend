@@ -186,26 +186,35 @@ class AdminController_Post {
         { $sample: { size: 1 } },
       ]);
 
-      if (!random_cards && !random_cards.length) {
+      if (!random_cards && random_cards.length === 0) {
         return res.status(404).json({ error: "Карта не найдена" });
       }
 
-      random_cards.forEach((card) => {
-        const existingCard = user_info.myCards.find(
-          (c) => c.card_id.toString() === card._id.toString(),
+      const card = random_cards[0];
+
+      const updatedUser = await UsersModel.findOneAndUpdate(
+        {
+          _id: user.id,
+          "myCards.card_id": card._id,
+        },
+        {
+          $inc: { "myCards.$.quantity": 1 },
+        },
+        {
+          new: true,
+        },
+      );
+
+      if (!updatedUser) {
+        await UsersModel.updateOne(
+          { _id: user.id },
+          {
+            $push: {
+              myCards: { card_id: card._id, quantity: 1 },
+            },
+          },
         );
-
-        if (existingCard) {
-          existingCard.quantity += 1;
-        } else {
-          user_info.myCards.push({
-            card_id: card._id,
-            quantity: 1,
-          });
-        }
-      });
-
-      await user_info.save();
+      }
 
       return res.status(200).json({ success: "Карта успешно выдана!" });
     } catch (err) {
@@ -410,7 +419,7 @@ class AdminController_Post {
         { upsert: true, new: true },
       );
 
-      return res.status(200).json({ success: "Новый кейс успешно создан!" });
+      return res.status(200).json({ success: `Новый кейс успешно создан!` });
     } catch (err) {
       console.error("Ошибка в CreateCasePost:", err);
       const errorMessage =
@@ -419,7 +428,33 @@ class AdminController_Post {
     }
   };
 
-  static EditCasePost = async (
+  static DeleteCasePost = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { case_id } = req.params;
+
+      const user = req.user;
+      if (!user || user.role !== "Admin") return;
+
+      await App_CaseConfigModel.findOneAndUpdate(
+        { _id: "cases_config_app" },
+        { $pull: { cases: { _id: case_id } } },
+        { new: true },
+      );
+
+      return res.status(200).json({ success: `Кейс успешно удалён!` });
+    } catch (err) {
+      console.error("Ошибка в DeleteCasePost:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Неизвестная ошибка";
+      return res.status(500).json({ error: errorMessage });
+    }
+  };
+
+  static EditCaseDataPost = async (
     req: CustomRequest,
     res: Response,
     next: NextFunction,
@@ -454,9 +489,89 @@ class AdminController_Post {
         return;
       }
 
-      return res.status(200).json({ success: "Новый кейс успешно создан!" });
+      return res
+        .status(200)
+        .json({ success: "Данные кейса успешно обновлены!" });
     } catch (err) {
       console.error("Ошибка в CreateCasePost:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Неизвестная ошибка";
+      return res.status(500).json({ error: errorMessage });
+    }
+  };
+
+  static AddNewCardPost = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { case_id } = req.params;
+      const { card_id, card_chance } = req.body;
+
+      const user = req.user;
+      if (!user || user.role !== "Admin") return;
+
+      if (card_id.length < 1 || card_chance.length < 1) {
+        return res.status(400).json({ error: "Пожалуйста, заполните все поля ввода." });
+      }
+
+      const caseConfig = App_CaseConfigModel.getSettings();
+      // const isCardAlreadyHas = caseConfig.cases.find({ _id: { $in: card_id } });
+      const isCardAlreadyHas = caseConfig;
+
+      const card_info = await CardsModel.findById(card_id);
+
+      console.log("isCardAlreadyHas", isCardAlreadyHas);
+
+      if (!card_info) {
+        return res.status(404).json({ error: "Кейс не найден." })
+      }
+
+      console.log("case_id", case_id);
+      console.log("card_id", card_id);
+      console.log("card_chance", card_chance);
+
+      const updatedCase = await App_CaseConfigModel.findOneAndUpdate(
+        {
+          _id: "cases_config_app",
+          "cases._id": case_id,
+        },
+        {
+          $push: {
+            "cases.$[caseElem].content": {
+              _id: card_id,
+              chance: card_chance,
+            },
+          },
+        },
+        {
+          new: true,
+          arrayFilters: [{ "caseElem._id": case_id }],
+        },
+      );
+
+      if (!updatedCase) {
+        return res.status(404).json({ error: "Карта или кейс не найдены." });
+      }
+
+      return res.status(200).json({
+        card: {
+          id: card_info.id,
+          name: card_info.card_name,
+          description: card_info.card_description || "",
+          avatar: card_info.card_avatar,
+          lvl: card_info.card_lvl_info?.lvl_number || 1,
+          rarity: card_info.card_lvl_info?.lvl_name || "Default",
+          damage: card_info.card_stats?.card_damage || 0,
+          protection: card_info.card_stats?.card_protection || 0,
+          power_slot: card_info.power_slot || 5,
+          chance: card_chance,
+        },
+        success: `Карта ${card_id} добавлена в кейс ${case_id}!`,
+      });
+    } catch (err) {
+      console.error("Ошибка в AddNewCardPost:", err);
       const errorMessage =
         err instanceof Error ? err.message : "Неизвестная ошибка";
       return res.status(500).json({ error: errorMessage });

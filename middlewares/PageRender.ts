@@ -64,8 +64,6 @@ export const PageRender_v2 = (render_type: "auth" | "no_auth", render_data: any)
             const locale = req.basicData?.locale;
             const hasRefreshToken = !!req.cookies?.["refresh_token"];
 
-            console.log('render_data', render_data.length);
-
             if (hasRefreshToken) {
                 return authenticateJWT(req as any, res, async (err?: any) => {
                     if (res.headersSent) return;
