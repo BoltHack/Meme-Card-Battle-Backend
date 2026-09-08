@@ -232,11 +232,9 @@ class AdminController_View {
 
       const case_data = case_info.cases[caseIndex];
 
-      const cardIds = case_data.content.map(c => c._id.toString());
+      const cardIds = case_data.content.map((c) => c._id.toString());
 
       const case_cards = await CardsModel.find({ _id: { $in: cardIds } });
-
-      console.log("case_cards", case_cards);
 
       const formattedCardsArray = case_cards.flatMap((card) => {
         const isRandom = case_data.content.find(
@@ -254,7 +252,7 @@ class AdminController_View {
           damage: card.card_stats?.card_damage || 0,
           protection: card.card_stats?.card_protection || 0,
           power_slot: card.power_slot || 5,
-          chance: chance
+          chance: chance,
         };
       });
 
@@ -266,7 +264,6 @@ class AdminController_View {
       return res.status(500).json({ error: "Внутренняя ошибка сервера" });
     }
   };
-  
 }
 
 export default AdminController_View;

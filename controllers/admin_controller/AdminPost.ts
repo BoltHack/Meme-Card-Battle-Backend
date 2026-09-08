@@ -510,32 +510,29 @@ class AdminController_Post {
       const { card_id, card_chance } = req.body;
 
       const user = req.user;
-      if (!user || user.role !== "Admin") return;
+      if (!user || user.role !== "Admin") {
+        return res.status(403).json({ error: "Доступ запрещен." });
+      }
 
       if (card_id.length < 1 || card_chance.length < 1) {
         return res.status(400).json({ error: "Пожалуйста, заполните все поля ввода." });
       }
 
-      const caseConfig = App_CaseConfigModel.getSettings();
-      // const isCardAlreadyHas = caseConfig.cases.find({ _id: { $in: card_id } });
-      const isCardAlreadyHas = caseConfig;
-
       const card_info = await CardsModel.findById(card_id);
-
-      console.log("isCardAlreadyHas", isCardAlreadyHas);
 
       if (!card_info) {
         return res.status(404).json({ error: "Кейс не найден." })
       }
 
-      console.log("case_id", case_id);
-      console.log("card_id", card_id);
-      console.log("card_chance", card_chance);
-
       const updatedCase = await App_CaseConfigModel.findOneAndUpdate(
         {
           _id: "cases_config_app",
-          "cases._id": case_id,
+          cases: {
+            $elemMatch: {
+              _id: case_id,
+              "content._id": { $ne: card_id },
+            },
+          },
         },
         {
           $push: {
@@ -552,20 +549,20 @@ class AdminController_Post {
       );
 
       if (!updatedCase) {
-        return res.status(404).json({ error: "Карта или кейс не найдены." });
+        return res.status(404).json({ error: "Карта не найдена или уже присутствует в кейсе." });
       }
 
       return res.status(200).json({
         card: {
-          id: card_info.id,
-          name: card_info.card_name,
-          description: card_info.card_description || "",
-          avatar: card_info.card_avatar,
-          lvl: card_info.card_lvl_info?.lvl_number || 1,
-          rarity: card_info.card_lvl_info?.lvl_name || "Default",
-          damage: card_info.card_stats?.card_damage || 0,
-          protection: card_info.card_stats?.card_protection || 0,
-          power_slot: card_info.power_slot || 5,
+          id: card_info?.id,
+          name: card_info?.card_name,
+          description: card_info?.card_description || "",
+          avatar: card_info?.card_avatar,
+          lvl: card_info?.card_lvl_info?.lvl_number || 1,
+          rarity: card_info?.card_lvl_info?.lvl_name || "Default",
+          damage: card_info?.card_stats?.card_damage || 0,
+          protection: card_info?.card_stats?.card_protection || 0,
+          power_slot: card_info?.power_slot || 5,
           chance: card_chance,
         },
         success: `Карта ${card_id} добавлена в кейс ${case_id}!`,
