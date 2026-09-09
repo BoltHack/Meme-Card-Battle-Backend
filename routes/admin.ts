@@ -63,10 +63,10 @@ admin.post(
   AdminController_Post.EditCaseDataPost,
 );
 admin.post(
-  "/case/:case_id/edit/content",
+  "/case/:case_id/edit/content/:action_type",
   authenticateJWT,
   verifyPermissions("Admin"),
-  AdminController_Post.AddNewCardPost,
+  AdminController_Post.EditCaseContentPost,
 );
 admin.post(
   "/case/:case_id/delete",

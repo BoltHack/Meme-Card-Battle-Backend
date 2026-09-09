@@ -10,6 +10,7 @@ import CardsModel from "../../models/CardsModel";
 import BlogsModel from "../../models/BlogsModel";
 import AppModel from "../../models/admin/App_GlobalConfigModel";
 import App_CaseConfigModel from "../../models/admin/App_CasesConfigModel";
+import { error } from "console";
 
 function cleanTextRegex(dirtyInput: string) {
   if (typeof dirtyInput !== "string") return dirtyInput;
@@ -500,13 +501,13 @@ class AdminController_Post {
     }
   };
 
-  static AddNewCardPost = async (
+  static EditCaseContentPost = async (
     req: CustomRequest,
     res: Response,
     next: NextFunction,
   ) => {
     try {
-      const { case_id } = req.params;
+      const { case_id, action_type } = req.params;
       const { card_id, card_chance } = req.body;
 
       const user = req.user;
@@ -514,17 +515,53 @@ class AdminController_Post {
         return res.status(403).json({ error: "Доступ запрещен." });
       }
 
+      if (!mongoose.Types.ObjectId.isValid(card_id)) {
+        return res.status(404).json({ error: "Несуществующий ID." });
+      }
+
+      if (action_type !== "add" && action_type !== "delete") return;
+
+      let updatedCase;
+
+      if (action_type === "delete") {
+        updatedCase = await App_CaseConfigModel.findOneAndUpdate(
+          {
+            _id: "cases_config_app",
+            cases: {
+              $elemMatch: {
+                _id: case_id,
+                "content._id": { $ne: card_id },
+              },
+            },
+          },
+          {
+            $pull: {
+              "cases.$[caseElem].content": {
+                _id: card_id,
+              },
+            },
+          },
+          {
+            new: true,
+            arrayFilters: [{ "caseElem._id": case_id }],
+          },
+        );
+        return res.status(200).json({ success: "Карта успешно удалена!" });
+      }
+
       if (card_id.length < 1 || card_chance.length < 1) {
-        return res.status(400).json({ error: "Пожалуйста, заполните все поля ввода." });
+        return res
+          .status(400)
+          .json({ error: "Пожалуйста, заполните все поля ввода." });
       }
 
       const card_info = await CardsModel.findById(card_id);
 
       if (!card_info) {
-        return res.status(404).json({ error: "Кейс не найден." })
+        return res.status(404).json({ error: "Кейс не найден." });
       }
 
-      const updatedCase = await App_CaseConfigModel.findOneAndUpdate(
+      updatedCase = await App_CaseConfigModel.findOneAndUpdate(
         {
           _id: "cases_config_app",
           cases: {
@@ -549,7 +586,9 @@ class AdminController_Post {
       );
 
       if (!updatedCase) {
-        return res.status(404).json({ error: "Карта не найдена или уже присутствует в кейсе." });
+        return res
+          .status(404)
+          .json({ error: "Карта не найдена или уже присутствует в кейсе." });
       }
 
       return res.status(200).json({
