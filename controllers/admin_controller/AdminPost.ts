@@ -527,12 +527,6 @@ class AdminController_Post {
         updatedCase = await App_CaseConfigModel.findOneAndUpdate(
           {
             _id: "cases_config_app",
-            cases: {
-              $elemMatch: {
-                _id: case_id,
-                "content._id": { $ne: card_id },
-              },
-            },
           },
           {
             $pull: {
@@ -546,6 +540,13 @@ class AdminController_Post {
             arrayFilters: [{ "caseElem._id": case_id }],
           },
         );
+
+        if (!updatedCase) {
+          return res
+            .status(404)
+            .json({ error: "Карта или кейс не найдены." });
+        }
+
         return res.status(200).json({ success: "Карта успешно удалена!" });
       }
 
