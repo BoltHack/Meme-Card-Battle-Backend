@@ -125,7 +125,7 @@ class ViewController {
     next: NextFunction,
   ) => {
     try {
-      const { cards_category } = req.params;
+      // const { cards_category } = req.params;
       const user = req.user as User;
       const user_info = await UsersModel.findById(user.id);
 
@@ -135,46 +135,52 @@ class ViewController {
           .json({ error: "Пользователь не найден в базе данных" });
       }
 
-      const user_cards = (user_info as IUser)?.myCards || [];
+      // const user_cards = (user_info as IUser)?.myCards || [];
 
-      const cardsArray = user_cards.map((card) => card.card_id);
-      const quantityArray = user_cards.map((card) => card.quantity);
+      // const cardsArray = user_cards.map((card) => card.card_id);
+      // const quantityArray = user_cards.map((card) => card.quantity);
 
-      const cardQuery: Record<string, any> = {
-        _id: { $in: cardsArray },
-      };
+      // const cardQuery: Record<string, any> = {
+      //   _id: { $in: cardsArray },
+      // };
 
-      if (cards_category !== "all") {
-        cardQuery["card_lvl_info.lvl_name"] =
-          String(cards_category).toUpperCase();
-      }
+      // if (cards_category !== "all") {
+      //   cardQuery["card_lvl_info.lvl_name"] =
+      //     String(cards_category).toUpperCase();
+      // }
 
-      const get_cards = await CardsModel.find(cardQuery);
+      // const get_cards = await CardsModel.find(cardQuery);
 
-      const renderData = (get_cards as IUser)?.map((cards) => {
-        const cardIdStr = cards._id.toString();
+      // const renderData = (get_cards as IUser)?.map((cards) => {
+      //   const cardIdStr = cards._id.toString();
 
-        const matched_quantity = user_cards.find(
-          (c) => c.card_id?.toString() === cardIdStr,
-        );
+      //   const matched_quantity = user_cards.find(
+      //     (c) => c.card_id?.toString() === cardIdStr,
+      //   );
 
-        const quantity = matched_quantity ? matched_quantity.quantity : null;
+      //   // const test = get_cards.find(
+      //   //   (c) => c._id.toString() === matched_quantity?.card_id.toString(),
+      //   // );
 
-        return {
-          card_id: cards._id.toString(),
-          card_damage: cards.card_stats.card_damage,
-          card_protection: cards.card_stats.card_protection,
-          lvl_number: cards.card_lvl_info.lvl_number,
-          lvl_name: cards.card_lvl_info.lvl_name,
-          card_name: cards.card_name,
-          card_description: cards.card_description,
-          card_avatar: cards.card_avatar,
-          power_slot: cards.power_slot,
-          card_quantity: quantity
-        };
-      });
+      //   // console.log("test", test);
 
-      const cards_count = quantityArray?.reduce((acc, card) => acc + card, 0);
+      //   const quantity = matched_quantity ? matched_quantity.quantity : null;
+
+      //   return {
+      //     card_id: cards._id.toString(),
+      //     card_damage: cards.card_stats.card_damage,
+      //     card_protection: cards.card_stats.card_protection,
+      //     lvl_number: cards.card_lvl_info.lvl_number,
+      //     lvl_name: cards.card_lvl_info.lvl_name,
+      //     card_name: cards.card_name,
+      //     card_description: cards.card_description,
+      //     card_avatar: cards.card_avatar,
+      //     power_slot: cards.power_slot,
+      //     card_quantity: quantity
+      //   };
+      // });
+
+      // const cards_count = quantityArray?.reduce((acc, card) => acc + card, 0);
       // const power_count = renderData?.map(card => card.power_slot * card.card_quantity).reduce((acc, card) => acc + card, 0);
 
       return res.status(200).json({
@@ -186,8 +192,8 @@ class ViewController {
           money: user_info?.money,
           coins: user_info?.coins,
         },
-        cards_count: cards_count || 0,
-        renderData: renderData.length > 0 ? renderData : null,
+        // cards_count: cards_count || 0,
+        // renderData: renderData.length > 0 ? renderData : null,
       });
     } catch (err) {
       console.error("Ошибка:", err);

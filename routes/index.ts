@@ -6,6 +6,7 @@ import ViewController from "../controllers/basic_controller/ViewController";
 import authenticateJWT from "../middlewares/authenticateJWT";
 import CheckMaintenanceMode from "../middlewares/CheckMaintenanceMode";
 import { PageRender } from "../middlewares/PageRender";
+import PostController from "../controllers/basic_controller/PostController";
 
 const router = express.Router();
 
@@ -17,7 +18,7 @@ router.get(
 );
 
 router.get(
-  "/my-cards/:cards_category",
+  "/profile",
   authenticateJWT,
   CheckMaintenanceMode, ViewController.ProfileView,
 );
@@ -40,6 +41,12 @@ router.get(
   CheckMaintenanceMode,
   authenticateJWT,
   ViewController.GameView,
+);
+
+router.post(
+  "/cards/get/:cards_category",
+  authenticateJWT,
+  PostController.GetCardsPost,
 );
 
 // router.post('/play-game/:game_type', authenticateJWT, PostController.PlayGame);
