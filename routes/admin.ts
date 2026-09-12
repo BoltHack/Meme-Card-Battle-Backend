@@ -9,14 +9,49 @@ import { PageRender } from "../middlewares/PageRender";
 
 const admin = express.Router();
 
-admin.get('/panel', authenticateJWT, verifyPermissions("Admin"), PageRender("auth"));
-admin.get('/team', authenticateJWT, verifyPermissions("Admin"), AdminController_View.TeamView);
-admin.get('/settings', authenticateJWT, verifyPermissions("Admin"), AdminController_View.SettingsView);
+admin.get(
+  "/panel",
+  authenticateJWT,
+  verifyPermissions("Admin"),
+  PageRender("auth"),
+);
+admin.get(
+  "/team",
+  authenticateJWT,
+  verifyPermissions("Admin"),
+  AdminController_View.TeamView,
+);
+admin.get(
+  "/settings",
+  authenticateJWT,
+  verifyPermissions("Admin"),
+  AdminController_View.SettingsView,
+);
 
-admin.get('/card/list/:cards_category', authenticateJWT, verifyPermissions("Admin"), AdminController_View.CardListView);
-admin.get('/card/create', authenticateJWT, verifyPermissions("Admin"), PageRender("auth"));
-admin.get('/blog/create', authenticateJWT, verifyPermissions("Admin"), PageRender("auth"));
-admin.get('/blog/:blog_id/edit', authenticateJWT, verifyPermissions("Admin"), AdminController_View.EditBlogView);
+admin.get(
+  "/card/list/:cards_category",
+  authenticateJWT,
+  verifyPermissions("Admin"),
+  AdminController_View.CardListView,
+);
+admin.get(
+  "/card/create",
+  authenticateJWT,
+  verifyPermissions("Admin"),
+  PageRender("auth"),
+);
+admin.get(
+  "/blog/create",
+  authenticateJWT,
+  verifyPermissions("Admin"),
+  PageRender("auth"),
+);
+admin.get(
+  "/blog/:blog_id/edit",
+  authenticateJWT,
+  verifyPermissions("Admin"),
+  AdminController_View.EditBlogView,
+);
 
 admin.get(
   "/case/create",
@@ -28,7 +63,7 @@ admin.get(
   "/case/list",
   authenticateJWT,
   verifyPermissions("Admin"),
-  AdminController_View.CaseListView
+  AdminController_View.CaseListView,
 );
 admin.get(
   "/case/:case_id/edit/data",
@@ -43,12 +78,44 @@ admin.get(
   AdminController_View.EditCaseContentView,
 );
 
-admin.post('/card/create', authenticateJWT, verifyPermissions("Admin"), AdminController_Post.CreateCardPost);
-admin.post('/card/:card_id/delete', authenticateJWT, verifyPermissions("Admin"), AdminController_Post.RemoveCardPost);
+admin.post(
+  "/card/create",
+  authenticateJWT,
+  verifyPermissions("Admin"),
+  AdminController_Post.CreateCardPost,
+);
+admin.post(
+  "/card/:card_id/delete",
+  authenticateJWT,
+  verifyPermissions("Admin"),
+  AdminController_Post.RemoveCardPost,
+);
 
-admin.post('/blog/create', authenticateJWT, verifyPermissions("Admin"), AdminController_Post.BlogRedactionPost("create"));
-admin.post('/blog/:blog_id/edit', authenticateJWT, verifyPermissions("Admin"), AdminController_Post.BlogRedactionPost("edit"));
-admin.post('/blog/:blog_id/delete', authenticateJWT, verifyPermissions("Admin"), AdminController_Post.RemoveBlogPost);
+admin.post(
+  "/blog/create",
+  authenticateJWT,
+  verifyPermissions("Admin"),
+  AdminController_Post.BlogRedactionPost("create"),
+);
+admin.post(
+  "/blog/:blog_id/edit",
+  authenticateJWT,
+  verifyPermissions("Admin"),
+  AdminController_Post.BlogRedactionPost("edit"),
+);
+admin.post(
+  "/blog/:blog_id/delete",
+  authenticateJWT,
+  verifyPermissions("Admin"),
+  AdminController_Post.RemoveBlogPost,
+);
+
+admin.post(
+  "/blog/cover/add",
+  authenticateJWT,
+  verifyPermissions("Admin"),
+  AdminController_Post.AddBlogCoverPost,
+);
 
 admin.post(
   "/case/create",
@@ -75,8 +142,18 @@ admin.post(
   AdminController_Post.DeleteCasePost,
 );
 
-admin.post('/settings/change', authenticateJWT, verifyPermissions("Admin"), AdminController_Post.EditSettingsPost);
+admin.post(
+  "/settings/change",
+  authenticateJWT,
+  verifyPermissions("Admin"),
+  AdminController_Post.EditSettingsPost,
+);
 
-admin.post('/get-random-card', verifyPermissions("Admin"), authenticateJWT, AdminController_Post.GetRandomCardPost);
+admin.post(
+  "/get-random-card",
+  verifyPermissions("Admin"),
+  authenticateJWT,
+  AdminController_Post.GetRandomCardPost,
+);
 
 export default admin;

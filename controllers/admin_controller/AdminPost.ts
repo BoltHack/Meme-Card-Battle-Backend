@@ -393,6 +393,75 @@ class AdminController_Post {
     }
   };
 
+  static AddBlogCoverPost = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { gallery_cover } = req.body;
+
+      const user = req.user;
+      if (!user || user.role !== "Admin") return;
+
+      let imagePath = "";
+
+      if (
+        req.files &&
+        req.files.gallery_cover &&
+        req.files.gallery_cover?.size > 819
+      ) {
+        const imageFile = Array.isArray(req.files.gallery_cover)
+          ? req.files.gallery_cover[0]
+          : req.files.gallery_cover;
+
+        const fileExt = path.extname(imageFile.name);
+
+        if (!ALLOWED_EXTENSIONS.includes(fileExt)) {
+          return res.status(400).json({
+            error: "Недопустимый формат файла. Разрешены только изображения.",
+          });
+        }
+
+        if (imageFile.size > MAX_FILE_SIZE) {
+          return res
+            .status(400)
+            .json({ error: "Размер файла не должен превышать 5 МБ." });
+        }
+
+        const safeFileName = `gallery-${crypto.randomUUID()}${fileExt}`;
+
+        imagePath = `uploads/BlogGalleryCovers/${safeFileName}`;
+
+        const uploadDir = path.join(
+          process.cwd(),
+          "public",
+          "uploads",
+          "BlogGalleryCovers",
+        );
+        const savePath = path.join(uploadDir, safeFileName);
+
+        if (!fs.existsSync(uploadDir)) {
+          fs.mkdirSync(uploadDir, { recursive: true });
+        }
+
+        await imageFile.mv(savePath);
+      }
+
+      // blog_info.covers.push({ path: imagePath });
+      // blog_info.save();
+
+      return res
+        .status(200)
+        .json({ success: "Изображение сохранено!", cover: imagePath });
+    } catch (err) {
+      console.error("Ошибка в AddBlogCoverPost:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Неизвестная ошибка";
+      return res.status(500).json({ error: errorMessage });
+    }
+  };
+
   static CreateCasePost = async (
     req: CustomRequest,
     res: Response,
@@ -542,9 +611,7 @@ class AdminController_Post {
         );
 
         if (!updatedCase) {
-          return res
-            .status(404)
-            .json({ error: "Карта или кейс не найдены." });
+          return res.status(404).json({ error: "Карта или кейс не найдены." });
         }
 
         return res.status(200).json({ success: "Карта успешно удалена!" });

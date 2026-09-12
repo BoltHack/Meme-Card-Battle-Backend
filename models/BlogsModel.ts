@@ -1,46 +1,48 @@
 import { Schema, model, InferSchemaType } from "mongoose";
 
+// const coverSchema = new Schema(
+//   {
+//     path: { type: String },
+//   },
+//   { _id: false },
+// );
+
 const BlogSchema = new Schema({
-    author: {
-        id: {
-            type: String,
-        },
-        name: {
-            type: String,
-        }
+  author: {
+    id: {
+      type: String,
     },
-    main_content: {
-        title: {
-            type: String
-        },
-        description: {
-            type: String
-        },
-        cover: {
-            type: String,
-            default: ''
-        },
+    name: {
+      type: String,
     },
-    content: {
-        type: String
+  },
+  main_content: {
+    title: {
+      type: String,
     },
-    category: {
-        type: String
+    description: {
+      type: String,
     },
-    // tags: [{
-    //     tag_name: {
-    //         type: String,
-    //         required: true
-    //     },
-    // }],
-    isVisibility: {
-        type: Boolean,
-        default: true
+    cover: {
+      type: String,
+      default: "",
     },
-    date: {
-        type: Date,
-        default: Date.now
-    }
+  },
+  content: {
+    type: String,
+  },
+  category: {
+    type: String,
+  },
+  // covers: [coverSchema],
+  isVisibility: {
+    type: Boolean,
+    default: true,
+  },
+  date: {
+    type: Date,
+    default: Date.now,
+  },
 });
 
 // newsSchema.index({ fullDate: -1 });
