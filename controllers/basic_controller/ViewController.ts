@@ -9,6 +9,7 @@ import CardsModel from "../../models/CardsModel";
 import UsersModel from "../../models/UsersModel";
 import BlogsModel from "../../models/BlogsModel";
 import mongoose, { Types } from "mongoose";
+import App_CasesConfigModel from "../../models/admin/App_CasesConfigModel";
 
 interface UserData {
   id: string;
@@ -125,7 +126,6 @@ class ViewController {
     next: NextFunction,
   ) => {
     try {
-      // const { cards_category } = req.params;
       const user = req.user as User;
       const user_info = await UsersModel.findById(user.id);
 
@@ -134,54 +134,6 @@ class ViewController {
           .status(404)
           .json({ error: "Пользователь не найден в базе данных" });
       }
-
-      // const user_cards = (user_info as IUser)?.myCards || [];
-
-      // const cardsArray = user_cards.map((card) => card.card_id);
-      // const quantityArray = user_cards.map((card) => card.quantity);
-
-      // const cardQuery: Record<string, any> = {
-      //   _id: { $in: cardsArray },
-      // };
-
-      // if (cards_category !== "all") {
-      //   cardQuery["card_lvl_info.lvl_name"] =
-      //     String(cards_category).toUpperCase();
-      // }
-
-      // const get_cards = await CardsModel.find(cardQuery);
-
-      // const renderData = (get_cards as IUser)?.map((cards) => {
-      //   const cardIdStr = cards._id.toString();
-
-      //   const matched_quantity = user_cards.find(
-      //     (c) => c.card_id?.toString() === cardIdStr,
-      //   );
-
-      //   // const test = get_cards.find(
-      //   //   (c) => c._id.toString() === matched_quantity?.card_id.toString(),
-      //   // );
-
-      //   // console.log("test", test);
-
-      //   const quantity = matched_quantity ? matched_quantity.quantity : null;
-
-      //   return {
-      //     card_id: cards._id.toString(),
-      //     card_damage: cards.card_stats.card_damage,
-      //     card_protection: cards.card_stats.card_protection,
-      //     lvl_number: cards.card_lvl_info.lvl_number,
-      //     lvl_name: cards.card_lvl_info.lvl_name,
-      //     card_name: cards.card_name,
-      //     card_description: cards.card_description,
-      //     card_avatar: cards.card_avatar,
-      //     power_slot: cards.power_slot,
-      //     card_quantity: quantity
-      //   };
-      // });
-
-      // const cards_count = quantityArray?.reduce((acc, card) => acc + card, 0);
-      // const power_count = renderData?.map(card => card.power_slot * card.card_quantity).reduce((acc, card) => acc + card, 0);
 
       return res.status(200).json({
         id: user?.id || "",
@@ -192,9 +144,86 @@ class ViewController {
           money: user_info?.money,
           coins: user_info?.coins,
         },
-        // cards_count: cards_count || 0,
-        // renderData: renderData.length > 0 ? renderData : null,
       });
+    } catch (err) {
+      console.error("Ошибка:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Неизвестная ошибка";
+      return res.status(500).json({ error: errorMessage });
+    }
+  };
+
+  static CasesView = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const user = req.user as any;
+
+      const user_info = await UsersModel.findById(user.id);
+      const case_info = await App_CasesConfigModel.getSettings();
+
+      const cases = case_info.cases;
+
+      // const user_cases = user_info.keys.map((cs) => cs._id);
+
+      // console.log("user_cases", user_cases);
+
+      const caseData = cases.map((cs) => {
+        const caseIds = cs._id;
+
+        const matchedKeys = user_info.keys.find(
+          (k) => k._id.toString() === caseIds.toString(),
+        );
+
+        const count = matchedKeys ? matchedKeys.count : 0;
+
+        return {
+          id: cs._id.toString(),
+          name: cs.name,
+          description: cs.description,
+          icon: cs.icon,
+          rarity: cs.rarity,
+          price: cs.price,
+          keys: count,
+        };
+      });
+
+
+      const renderData = {
+        cases: caseData,
+      };
+
+      return PageRender_v2("auth", renderData)(req, res, next);
+    } catch (err) {
+      console.error("Ошибка:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Неизвестная ошибка";
+      return res.status(500).json({ error: errorMessage });
+    }
+  };
+
+  static ShopView = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const shop_info = await App_CasesConfigModel.getSettings();
+
+      const cases = shop_info.cases;
+
+      const caseData = cases.map((cs) => ({
+        id: cs._id.toString(),
+        name: cs.name,
+        description: cs.description,
+        icon: cs.icon,
+        rarity: cs.rarity,
+        price: cs.price,
+      }));
+
+      return PageRender_v2("auth", caseData)(req, res, next);
     } catch (err) {
       console.error("Ошибка:", err);
       const errorMessage =

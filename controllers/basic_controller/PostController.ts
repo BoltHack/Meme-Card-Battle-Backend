@@ -2,20 +2,37 @@ import { Request, Response, NextFunction } from "express";
 import mongoose from "mongoose";
 import UsersModel from "../../models/UsersModel";
 import CardsModel from "../../models/CardsModel";
-import GamesModel from "../../models/GamesModel";
-// import mongoose, {Schema} from "mongoose";
+import App_CasesConfigModel from "../../models/admin/App_CasesConfigModel";
+
 interface UserData {
   id: string;
   name: string;
   lvl: number;
 }
+
 interface BasicData {
   locale: string;
 }
+
 interface CustomRequest extends Request {
   user?: UserData;
   basicData: BasicData;
 }
+
+function getRandomCard(pool: any) {
+  const totalChance = pool.reduce((sum, item) => sum + item.chance, 0);
+  let randomNum = Math.random() * totalChance;
+
+  for (let i = 0; i < pool.length; i++) {
+    if (randomNum < pool[i].chance) {
+      return pool[i];
+    }
+    randomNum -= pool[i].chance;
+  }
+
+  return pool[0];
+}
+
 class PostController {
   static GetCardsPost = async (
     req: CustomRequest,
@@ -74,12 +91,234 @@ class PostController {
       });
 
       const cards_count = quantityArray?.reduce((acc, card) => acc + card, 0);
-    //   const power_count = renderData?.map(card => card.power_slot * card.card_quantity).reduce((acc, card) => acc + card, 0);
+      //   const power_count = renderData?.map(card => card.power_slot * card.card_quantity).reduce((acc, card) => acc + card, 0);
 
       return res.status(200).json({
         cards_count: cards_count || 0,
-        renderData: renderData.length > 0 ? renderData : null
+        renderData: renderData.length > 0 ? renderData : null,
       });
+    } catch (err) {
+      console.error("Ошибка:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Неизвестная ошибка";
+      return res.status(500).json({ error: errorMessage });
+    }
+  };
+
+  static GetCaseContentPost = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { case_id } = req.params;
+
+      const errorMsg = "Страница не найдена.";
+
+      if (!mongoose.Types.ObjectId.isValid(case_id)) {
+        return res.status(404).json({ error: errorMsg });
+      }
+
+      const case_info = await App_CasesConfigModel.findById("cases_config_app");
+
+      const caseIndex = case_info.cases.findIndex(
+        (c) => c._id.toString() === case_id.toString(),
+      );
+
+      const case_data = case_info.cases[caseIndex];
+
+      const cardIds = case_data.content.map((c) => c._id.toString());
+
+      const case_cards = await CardsModel.find({ _id: { $in: cardIds } });
+
+      const formattedCardsArray = case_cards.flatMap((card) => {
+        const isRandom = case_data.content.find(
+          (c) => c._id.toString() === card._id.toString(),
+        );
+        const chance = isRandom.chance;
+
+        return {
+          id: card.id,
+          name: card.card_name,
+          description: card.card_description || "",
+          avatar: card.card_avatar,
+          lvl: card.card_lvl_info?.lvl_number || 1,
+          rarity: card.card_lvl_info?.lvl_name || "Default",
+          damage: card.card_stats?.card_damage || 0,
+          protection: card.card_stats?.card_protection || 0,
+          power_slot: card.power_slot || 5,
+          chance: chance,
+        };
+      });
+
+      const renderData = formattedCardsArray;
+
+      return res
+        .status(200)
+        .json({ success: "Данные успешно получены!", content: renderData });
+    } catch (err) {
+      console.error("Ошибка:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Неизвестная ошибка";
+      return res.status(500).json({ error: errorMessage });
+    }
+  };
+
+  static BuyCasePost = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { case_id } = req.params;
+      const user = req.user as any;
+
+      const case_info = await App_CasesConfigModel.getSettings();
+
+      if (!case_info || !case_info.cases) {
+        return res
+          .status(500)
+          .json({ error: "Конфигурация кейсов не найдена" });
+      }
+
+      const case_data = case_info.cases.find(
+        (cs) => cs._id.toString() === case_id.toString(),
+      );
+
+      if (!case_data) {
+        return res.status(404).json({ error: "Кейс не найден" });
+      }
+
+      const case_price = Number(case_data.price);
+
+      const user_info = await UsersModel.findOneAndUpdate(
+        {
+          _id: user.id,
+          coins: { $gte: case_price },
+        },
+        {
+          $inc: { coins: -case_price },
+        },
+        {
+          new: true,
+        },
+      );
+
+      if (!user_info) {
+        return res.status(400).json({ error: "У вас недостаточно средств." });
+      }
+
+      const hasKey = user_info.keys.some(
+        (k: any) => k._id.toString() === case_id.toString(),
+      );
+
+      if (hasKey) {
+        await UsersModel.updateOne(
+          { _id: user.id, "keys._id": case_id },
+          {
+            $inc: { "keys.$.count": 1 },
+          },
+        );
+      } else {
+        await UsersModel.updateOne(
+          { _id: user.id },
+          {
+            $push: {
+              keys: {
+                _id: case_id,
+                count: 1,
+              },
+            },
+          },
+        );
+      }
+
+      return res.status(200).json({ success: "Кейс успешно куплен!" });
+    } catch (err) {
+      console.error("Ошибка:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Неизвестная ошибка";
+      return res.status(500).json({ error: errorMessage });
+    }
+  };
+
+  static OpenCasePost = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { case_id } = req.params;
+
+      if (!mongoose.Types.ObjectId.isValid(case_id)) {
+        return res.status(404).json({ error: "Кейс не найден" });
+      }
+
+      const user = req.user as any;
+      const user_info = await UsersModel.findById(user.id);
+
+      if (!user_info) {
+        return res.status(404).json({ error: "Пользователь не найден." });
+      }
+
+      const case_info = await App_CasesConfigModel.getSettings();
+
+      const caseIndex = case_info.cases.findIndex(
+        (c) => c._id.toString() === case_id.toString(),
+      );
+
+      const case_data = case_info.cases[caseIndex];
+
+      if (!user_info.keys[caseIndex] || user_info.keys[caseIndex].count < 1) {
+        return res
+          .status(422)
+          .json({ error: "У вас нет ключей для открытия." });
+      }
+
+      const user_keys = user_info.keys.find(
+        (ct) => ct._id.toString() === case_data._id.toString(),
+      );
+
+      const case_map = case_data.content.map((c) => {
+        return {
+          id: c._id.toString(),
+          chance: c.chance,
+        };
+      });
+
+      const result = getRandomCard(case_map);
+
+      const card_info = await CardsModel.findById(result.id);
+
+      if (!card_info) {
+        return res.status(404).json({ error: "Карта не найдена" });
+      }
+
+      const card_data = {
+        card_name: card_info.card_name,
+        card_avatar: card_info.card_avatar,
+        card_description: card_info.card_description,
+        card_damage: card_info?.card_stats?.card_damage,
+        card_protection: card_info?.card_stats?.card_protection,
+        lvl_number: card_info?.card_lvl_info?.lvl_number,
+        lvl_name: card_info?.card_lvl_info?.lvl_name,
+        power_slot: card_info.power_slot,
+      };
+
+      await UsersModel.findOneAndUpdate(
+        {
+          _id: user.id,
+          "keys._id": case_id,
+        },
+        {
+          $inc: { "keys.$.count": -1 },
+        },
+        {
+          new: true,
+        },
+      );
+
+      return res.status(200).json({ success: "Выигрыш!", card: card_data });
     } catch (err) {
       console.error("Ошибка:", err);
       const errorMessage =

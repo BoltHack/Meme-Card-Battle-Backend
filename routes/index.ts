@@ -23,6 +23,20 @@ router.get(
   CheckMaintenanceMode, ViewController.ProfileView,
 );
 
+router.get(
+  "/cases",
+  authenticateJWT,
+  CheckMaintenanceMode,
+  ViewController.CasesView,
+);
+
+router.get(
+  "/shop",
+  authenticateJWT,
+  CheckMaintenanceMode,
+  ViewController.ShopView,
+);
+
 router.get("/how-to-play", CheckMaintenanceMode, ViewController.ReadPage_docs("how-to-play"));
 
 router.get("/terms-of-use", CheckMaintenanceMode, ViewController.ReadPage_docs("terms-of-use"));
@@ -47,6 +61,23 @@ router.post(
   "/cards/get/:cards_category",
   authenticateJWT,
   PostController.GetCardsPost,
+);
+
+router.post(
+  "/case/:case_id/content/get",
+  authenticateJWT,
+  PostController.GetCaseContentPost,
+);
+
+router.post(
+  "/case/:case_id/buy",
+  authenticateJWT,
+  PostController.BuyCasePost,
+);
+router.post(
+  "/case/:case_id/open",
+  authenticateJWT,
+  PostController.OpenCasePost,
 );
 
 // router.post('/play-game/:game_type', authenticateJWT, PostController.PlayGame);

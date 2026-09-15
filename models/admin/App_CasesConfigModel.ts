@@ -15,6 +15,7 @@ const App_CasesConfigSchema = new Schema(
       {
         name: String,
         description: String,
+        icon: String,
         rarity: String,
         price: String,
         content: [

@@ -199,6 +199,7 @@ class AdminController_View {
       const renderData = {
         name: case_data.name,
         description: case_data.description,
+        icon: case_data.icon,
         rarity: case_data.rarity,
         price: case_data.price,
       };

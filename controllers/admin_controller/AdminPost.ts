@@ -10,7 +10,6 @@ import CardsModel from "../../models/CardsModel";
 import BlogsModel from "../../models/BlogsModel";
 import AppModel from "../../models/admin/App_GlobalConfigModel";
 import App_CaseConfigModel from "../../models/admin/App_CasesConfigModel";
-import { error } from "console";
 
 function cleanTextRegex(dirtyInput: string) {
   if (typeof dirtyInput !== "string") return dirtyInput;
@@ -468,7 +467,7 @@ class AdminController_Post {
     next: NextFunction,
   ) => {
     try {
-      const { name, description, rarity, price } = req.body;
+      const { name, description, icon, rarity, price } = req.body;
 
       const user = req.user;
       if (!user || user.role !== "Admin") return;
@@ -480,6 +479,7 @@ class AdminController_Post {
             cases: {
               name: String(name),
               description: String(description),
+              icon: String(icon),
               rarity: String(rarity),
               price: Number(price),
               content: [],
@@ -531,7 +531,7 @@ class AdminController_Post {
   ) => {
     try {
       const { case_id } = req.params;
-      const { name, description, rarity, price } = req.body;
+      const { name, description, icon, rarity, price } = req.body;
 
       const user = req.user;
       if (!user || user?.role !== "Admin") return;
@@ -546,6 +546,7 @@ class AdminController_Post {
             "cases.$": {
               name: String(name),
               description: String(description),
+              icon: String(icon),
               rarity: String(rarity),
               price: Number(price),
             },
