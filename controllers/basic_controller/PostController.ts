@@ -275,9 +275,9 @@ class PostController {
           .json({ error: "У вас нет ключей для открытия." });
       }
 
-      const user_keys = user_info.keys.find(
-        (ct) => ct._id.toString() === case_data._id.toString(),
-      );
+      // const user_keys = user_info.keys.find(
+      //   (ct) => ct._id.toString() === case_data._id.toString(),
+      // );
 
       const case_map = case_data.content.map((c) => {
         return {
@@ -294,16 +294,30 @@ class PostController {
         return res.status(404).json({ error: "Карта не найдена" });
       }
 
-      const card_data = {
-        card_name: card_info.card_name,
-        card_avatar: card_info.card_avatar,
-        card_description: card_info.card_description,
-        card_damage: card_info?.card_stats?.card_damage,
-        card_protection: card_info?.card_stats?.card_protection,
-        lvl_number: card_info?.card_lvl_info?.lvl_number,
-        lvl_name: card_info?.card_lvl_info?.lvl_name,
-        power_slot: card_info.power_slot,
-      };
+      const hasCard = user_info.myCards.some(
+        (k: any) => k.card_id.toString() === result.id.toString(),
+      );
+
+      if (hasCard) {
+        await UsersModel.updateOne(
+          { _id: user.id, "myCards.card_id": result.id },
+          {
+            $inc: { "myCards.$.quantity": 1 },
+          },
+        );
+      } else {
+        await UsersModel.updateOne(
+          { _id: user.id },
+          {
+            $push: {
+              myCards: {
+                card_id: case_id,
+                quantity: 1,
+              },
+            },
+          },
+        );
+      }
 
       await UsersModel.findOneAndUpdate(
         {
@@ -317,6 +331,17 @@ class PostController {
           new: true,
         },
       );
+
+      const card_data = {
+        card_name: card_info.card_name,
+        card_avatar: card_info.card_avatar,
+        card_description: card_info.card_description,
+        card_damage: card_info?.card_stats?.card_damage,
+        card_protection: card_info?.card_stats?.card_protection,
+        lvl_number: card_info?.card_lvl_info?.lvl_number,
+        lvl_name: card_info?.card_lvl_info?.lvl_name,
+        power_slot: card_info.power_slot,
+      };
 
       return res.status(200).json({ success: "Выигрыш!", card: card_data });
     } catch (err) {
