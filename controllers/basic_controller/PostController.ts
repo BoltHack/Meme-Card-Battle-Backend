@@ -250,6 +250,8 @@ class PostController {
     try {
       const { case_id } = req.params;
 
+      console.log("case_id", case_id);
+
       if (!mongoose.Types.ObjectId.isValid(case_id)) {
         return res.status(404).json({ error: "Кейс не найден" });
       }
@@ -264,12 +266,18 @@ class PostController {
       const case_info = await App_CasesConfigModel.getSettings();
 
       const caseIndex = case_info.cases.findIndex(
+        (cs) => cs._id.toString() === case_id.toString(),
+      );
+
+      const userKeys = user_info.keys.findIndex(
         (c) => c._id.toString() === case_id.toString(),
       );
 
       const case_data = case_info.cases[caseIndex];
 
-      if (!user_info.keys[caseIndex] || user_info.keys[caseIndex].count < 1) {
+      const user_keys_count = user_info.keys[userKeys];
+
+      if (!user_keys_count.count || Number(user_keys_count.count) < 1) {
         return res
           .status(422)
           .json({ error: "У вас нет ключей для открытия." });

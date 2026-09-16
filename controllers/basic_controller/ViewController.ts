@@ -170,7 +170,7 @@ class ViewController {
 
       // console.log("user_cases", user_cases);
 
-      const caseData = cases.map((cs) => {
+      const caseData = cases.map((cs) => {        
         const caseIds = cs._id;
 
         const matchedKeys = user_info.keys.find(
@@ -425,10 +425,13 @@ class ViewController {
         return res.status(404).json({ error: errorMsg });
       }
 
+      const user_info = await UsersModel.findById(blogRead?.author?.id);
+
       const renderData = {
         author: {
           id: blogRead?.author?.id as BlogData,
           name: blogRead?.author?.name as BlogData,
+          avatar: user_info?.image
         },
         title: blogRead?.main_content?.title as BlogData,
         description: blogRead?.main_content?.description as BlogData,
