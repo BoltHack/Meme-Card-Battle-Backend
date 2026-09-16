@@ -250,8 +250,6 @@ class PostController {
     try {
       const { case_id } = req.params;
 
-      console.log("case_id", case_id);
-
       if (!mongoose.Types.ObjectId.isValid(case_id)) {
         return res.status(404).json({ error: "Кейс не найден" });
       }
@@ -303,7 +301,7 @@ class PostController {
       }
 
       const hasCard = user_info.myCards.some(
-        (k: any) => k.card_id.toString() === result.id.toString(),
+        (c) => c.card_id.toString() === result.id.toString(),
       );
 
       if (hasCard) {
@@ -319,7 +317,7 @@ class PostController {
           {
             $push: {
               myCards: {
-                card_id: case_id,
+                card_id: result.id,
                 quantity: 1,
               },
             },
