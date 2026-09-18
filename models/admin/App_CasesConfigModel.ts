@@ -1,3 +1,4 @@
+import { string } from "joi";
 import { Schema, model, InferSchemaType, Model } from "mongoose";
 
 export type IAppSettings = InferSchemaType<typeof App_CasesConfigSchema>;
@@ -13,11 +14,13 @@ const App_CasesConfigSchema = new Schema(
     _id: { type: String, default: "cases_config_app" },
     cases: [
       {
-        name: String,
-        description: String,
-        icon: String,
-        rarity: String,
-        price: String,
+        name: { type: String },
+        description: { type: String },
+        icon: { type: String },
+        rarity: { type: String },
+        quantity: { type: String, default: "0" },
+        price: { type: String },
+        priority: { type: String, default: "1" },
         content: [
           {
             _id: Schema.Types.ObjectId,

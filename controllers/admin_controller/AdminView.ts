@@ -201,7 +201,9 @@ class AdminController_View {
         description: case_data.description,
         icon: case_data.icon,
         rarity: case_data.rarity,
+        quantity: case_data.quantity,
         price: case_data.price,
+        priority: case_data.priority,
       };
 
       return PageRender_v2("auth", renderData)(req, res, next);

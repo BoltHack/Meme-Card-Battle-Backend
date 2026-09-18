@@ -10,17 +10,26 @@ import PostController from "../controllers/basic_controller/PostController";
 
 const router = express.Router();
 
-router.get("/", CheckMaintenanceMode, PageRender("no_auth"));
+router.get("/", CheckMaintenanceMode, ViewController.MainView);
+
+router.get(
+  "/play",
+  CheckMaintenanceMode,
+  authenticateJWT,
+  ViewController.PlayView,
+);
 
 router.get(
   "/help-center",
-  CheckMaintenanceMode, ViewController.ReadPage_json("help-center_categories"),
+  CheckMaintenanceMode,
+  ViewController.ReadPage_json("help-center_categories"),
 );
 
 router.get(
   "/profile",
   authenticateJWT,
-  CheckMaintenanceMode, ViewController.ProfileView,
+  CheckMaintenanceMode,
+  ViewController.ProfileView,
 );
 
 router.get(
@@ -37,13 +46,36 @@ router.get(
   ViewController.ShopView,
 );
 
-router.get("/how-to-play", CheckMaintenanceMode, ViewController.ReadPage_docs("how-to-play"));
+router.get(
+  "/settings/profile",
+  authenticateJWT,
+  CheckMaintenanceMode,
+  ViewController.ProfileSettingsView,
+);
 
-router.get("/terms-of-use", CheckMaintenanceMode, ViewController.ReadPage_docs("terms-of-use"));
-router.get("/privacy-policy", CheckMaintenanceMode, ViewController.ReadPage_docs("privacy-policy"));
+router.get(
+  "/how-to-play",
+  CheckMaintenanceMode,
+  ViewController.ReadPage_docs("how-to-play"),
+);
+
+router.get(
+  "/terms-of-use",
+  CheckMaintenanceMode,
+  ViewController.ReadPage_docs("terms-of-use"),
+);
+router.get(
+  "/privacy-policy",
+  CheckMaintenanceMode,
+  ViewController.ReadPage_docs("privacy-policy"),
+);
 
 router.get("/blog", CheckMaintenanceMode, ViewController.BlogView);
-router.get("/category/:blog_category", CheckMaintenanceMode, ViewController.BlogCategoryView);
+router.get(
+  "/category/:blog_category",
+  CheckMaintenanceMode,
+  ViewController.BlogCategoryView,
+);
 router.get("/blog/:blog_id", CheckMaintenanceMode, ViewController.BlogReadView);
 
 router.get("/bot-settings", CheckMaintenanceMode, PageRender("auth"));
@@ -69,11 +101,7 @@ router.post(
   PostController.GetCaseContentPost,
 );
 
-router.post(
-  "/case/:case_id/buy",
-  authenticateJWT,
-  PostController.BuyCasePost,
-);
+router.post("/case/:case_id/buy", authenticateJWT, PostController.BuyCasePost);
 router.post(
   "/case/:case_id/open",
   authenticateJWT,

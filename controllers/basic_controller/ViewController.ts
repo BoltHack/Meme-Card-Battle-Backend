@@ -50,6 +50,7 @@ interface BlogData {
   author: {
     id: string;
     name: string;
+    role: string;
   };
   isVisibility: boolean;
   main_content: {
@@ -120,6 +121,65 @@ class ViewController {
     };
   };
 
+  static MainView = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const blog_info = await BlogsModel.find({});
+
+      const renderData = blog_info.slice(-3).map((blog) => ({
+        author: blog.author?.name,
+        title: blog.main_content?.title,
+        description: blog.main_content?.description,
+        cover: blog.main_content?.cover,
+        category: blog.category,
+        date: blog.date,
+        id: blog._id,
+      })).reverse();
+
+      // const renderData = blog_info.slice(-3);
+
+      return PageRender_v2("no_auth", renderData)(req, res, next);
+    } catch (err) {
+      console.error("Ошибка:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Неизвестная ошибка";
+      return res.status(500).json({ error: errorMessage });
+    }
+  };
+
+  static PlayView = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const user = req.user as any;
+
+      const user_info = await UsersModel.findById(user.id);
+
+      if (!user_info) {
+        return res.status(404).json({ error: "Пользователь не найден." });
+      }
+
+      const renderData = {
+        name: user_info?.name,
+        money: user_info?.money,
+        coins: user_info?.coins,
+        lvl: user_info?.lvl,
+      };
+
+      return PageRender_v2("auth", renderData)(req, res, next);
+    } catch (err) {
+      console.error("Ошибка:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Неизвестная ошибка";
+      return res.status(500).json({ error: errorMessage });
+    }
+  };
+
   static ProfileView = async (
     req: CustomRequest,
     res: Response,
@@ -139,11 +199,6 @@ class ViewController {
         id: user?.id || "",
         name: user?.name || "",
         role: user?.role || "",
-        stats: {
-          lvl: user_info?.lvl,
-          money: user_info?.money,
-          coins: user_info?.coins,
-        },
       });
     } catch (err) {
       console.error("Ошибка:", err);
@@ -170,7 +225,7 @@ class ViewController {
 
       // console.log("user_cases", user_cases);
 
-      const caseData = cases.map((cs) => {        
+      const caseData = cases.map((cs) => {
         const caseIds = cs._id;
 
         const matchedKeys = user_info.keys.find(
@@ -189,7 +244,6 @@ class ViewController {
           keys: count,
         };
       });
-
 
       const renderData = {
         cases: caseData,
@@ -220,7 +274,9 @@ class ViewController {
         description: cs.description,
         icon: cs.icon,
         rarity: cs.rarity,
+        quantity: cs.quantity,
         price: cs.price,
+        priority: cs.priority,
       }));
 
       return PageRender_v2("auth", caseData)(req, res, next);
@@ -431,7 +487,8 @@ class ViewController {
         author: {
           id: blogRead?.author?.id as BlogData,
           name: blogRead?.author?.name as BlogData,
-          avatar: user_info?.image
+          role: user_info?.role,
+          avatar: user_info?.image,
         },
         title: blogRead?.main_content?.title as BlogData,
         description: blogRead?.main_content?.description as BlogData,
@@ -442,6 +499,33 @@ class ViewController {
       };
 
       return PageRender_v2("no_auth", renderData)(req, res, next);
+    } catch (err) {
+      console.error("Ошибка:", err);
+      return res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    }
+  };
+
+  static ProfileSettingsView = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const user = req.user as any;
+      const user_info = await UsersModel.findById(user.id);
+
+      if (!user_info) {
+        return res.status(404).json({ error: "Пользователь не найден." });
+      }
+
+      const renderData = {
+        name: user_info?.name,
+        avatar: user_info?.image,
+        role: user_info?.role,
+      };
+
+      return PageRender_v2("auth", renderData)(req, res, next);
+      // return res.status(200).json({  });
     } catch (err) {
       console.error("Ошибка:", err);
       return res.status(500).json({ error: "Внутренняя ошибка сервера" });

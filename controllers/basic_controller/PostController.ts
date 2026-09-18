@@ -171,6 +171,7 @@ class PostController {
   ) => {
     try {
       const { case_id } = req.params;
+
       const user = req.user as any;
 
       const case_info = await App_CasesConfigModel.getSettings();
@@ -190,6 +191,7 @@ class PostController {
       }
 
       const case_price = Number(case_data.price);
+      const case_quantity = Number(case_data.quantity);
 
       const user_info = await UsersModel.findOneAndUpdate(
         {
@@ -216,7 +218,7 @@ class PostController {
         await UsersModel.updateOne(
           { _id: user.id, "keys._id": case_id },
           {
-            $inc: { "keys.$.count": 1 },
+            $inc: { "keys.$.count": case_quantity },
           },
         );
       } else {
@@ -226,14 +228,21 @@ class PostController {
             $push: {
               keys: {
                 _id: case_id,
-                count: 1,
+                count: case_quantity,
               },
             },
           },
         );
       }
 
-      return res.status(200).json({ success: "Кейс успешно куплен!" });
+      return res.status(200).json({
+        success: "Кейс успешно куплен!",
+        coins: user_info.coins,
+        shopData: {
+          product: case_data.name,
+          quantity: case_quantity,
+        },
+      });
     } catch (err) {
       console.error("Ошибка:", err);
       const errorMessage =
@@ -275,28 +284,37 @@ class PostController {
 
       const user_keys_count = user_info.keys[userKeys];
 
-      if (!user_keys_count.count || Number(user_keys_count.count) < 1) {
+      if (!user_keys_count || Number(user_keys_count.count) < 1) {
         return res
           .status(422)
           .json({ error: "У вас нет ключей для открытия." });
       }
 
-      // const user_keys = user_info.keys.find(
-      //   (ct) => ct._id.toString() === case_data._id.toString(),
-      // );
+      const user_cards = (user_info as any)?.myCards.map((uc) => uc.quantity);
+      const user_cards_count = (user_cards as number[])?.reduce(
+        (acc, curr) => acc + curr,
+        0,
+      );
 
-      const case_map = case_data.content.map((c) => {
-        return {
-          id: c._id.toString(),
-          chance: c.chance,
-        };
-      });
+      if (user_cards_count >= 150) {
+        return res.status(403).json({ error: "Ваш инвентарь переполнен." });
+      }
+        // const user_keys = user_info.keys.find(
+        //   (ct) => ct._id.toString() === case_data._id.toString(),
+        // );
+
+        const case_map = case_data.content.map((c) => {
+          return {
+            id: c._id.toString(),
+            chance: c.chance,
+          };
+        });
 
       const result = getRandomCard(case_map);
 
       const card_info = await CardsModel.findById(result.id);
 
-      if (!card_info) {
+      if (!card_info || result.id === undefined) {
         return res.status(404).json({ error: "Карта не найдена" });
       }
 

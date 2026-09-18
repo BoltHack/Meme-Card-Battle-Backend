@@ -467,7 +467,8 @@ class AdminController_Post {
     next: NextFunction,
   ) => {
     try {
-      const { name, description, icon, rarity, price } = req.body;
+      const { name, description, icon, rarity, quantity, price, priority } =
+        req.body;
 
       const user = req.user;
       if (!user || user.role !== "Admin") return;
@@ -477,11 +478,13 @@ class AdminController_Post {
         {
           $push: {
             cases: {
-              name: String(name),
-              description: String(description),
-              icon: String(icon),
-              rarity: String(rarity),
-              price: Number(price),
+              name: name,
+              description: description,
+              icon: icon,
+              rarity: rarity,
+              quantity: quantity,
+              price: price,
+              priority: priority,
               content: [],
             },
           },
@@ -531,7 +534,9 @@ class AdminController_Post {
   ) => {
     try {
       const { case_id } = req.params;
-      const { name, description, icon, rarity, price } = req.body;
+
+      const { name, description, icon, rarity, quantity, price, priority } =
+        req.body;
 
       const user = req.user;
       if (!user || user?.role !== "Admin") return;
@@ -543,28 +548,28 @@ class AdminController_Post {
         },
         {
           $set: {
-            "cases.$": {
-              name: String(name),
-              description: String(description),
-              icon: String(icon),
-              rarity: String(rarity),
-              price: Number(price),
-            },
+            "cases.$.name": name,
+            "cases.$.description": description,
+            "cases.$.icon": icon,
+            "cases.$.rarity": rarity,
+            "cases.$.quantity": quantity,
+            "cases.$.price": price,
+            "cases.$.priority": priority,
           },
         },
         { new: true },
       );
 
       if (!updatedCase) {
-        console.log("Кейс не найден.");
-        return;
+        console.log("Кейс не найден.", updatedCase);
+        return res.status(404).json({ error: "Кейс не найден." });
       }
 
       return res
         .status(200)
         .json({ success: "Данные кейса успешно обновлены!" });
     } catch (err) {
-      console.error("Ошибка в CreateCasePost:", err);
+      console.error("Ошибка в EditCaseDataPost:", err);
       const errorMessage =
         err instanceof Error ? err.message : "Неизвестная ошибка";
       return res.status(500).json({ error: errorMessage });
