@@ -27,31 +27,69 @@ const gameClients: Record<string, string> = {};
 let timers: Record<number, number> = {};
 
 export const GAME = async (socket: Socket) => {
-  // let isCardSelected = null;
   console.log(`Пользователь ${socket.id} подключился к игре.`);
 
   socket.on("join_game", async (data: any) => {
     const { game_key, player_id } = data;
     try {
-      const user_info = await UsersModel.findById(player_id);
-      const game_info = await GamesModel.findOne({ game_key: game_key });
+      const [user_info, game_info] = await Promise.all([
+        UsersModel.findById(player_id),
+        GamesModel.findOne({ game_key: game_key }),
+      ]);
 
-      if (!game_info) {
-        console.log("Игра не найдена.");
+      if (!user_info || !game_info) {
+        console.log("Игра или пользователь не найдены.");
         return;
       }
 
       const playerCurrentRoom = `InGame:${player_id}`;
       const activeSockets = await io.in(playerCurrentRoom).fetchSockets();
 
-      if (
-        (user_info.gameInfo === "Search" || user_info.gameInfo === "InGame") &&
-        activeSockets.length > 0 &&
-        activeSockets[0].rooms.has(playerCurrentRoom)
-      ) {
+      if (activeSockets.length > 0) {
+        const oldSocket = activeSockets[0];
+
+        if (oldSocket.id !== socket.id) {
+          console.log(`Игрок ${player_id} пытается зайти со второй вкладки.`);
+          socket.emit("game_error", "already_InGame");
+          return;
+        }
+      }
+
+      if (user_info.gameInfo === "Search" && activeSockets.length > 0) {
+        console.log(
+          `Игрок ${player_id} уже находится в поиске игры в другой вкладке.`,
+        );
         socket.emit("game_error", "already_InGame");
         return;
       }
+
+      // if (user_info.gameInfo === "InGame") {
+      //   console.log(
+      //     `Игрок ${player_id} перезагрузил страницу или вылетел. Кикаем из игры.`,
+      //   );
+
+      //   await GamesModel.findOneAndUpdate(
+      //     { game_key: game_key },
+      //     { $pull: { "game_online.users": player_id } },
+      //   );
+
+      //   user_info.gameInfo = "Default";
+      //   await user_info.save();
+
+      //   socket.emit("game_error", "game_abandoned_due_to_reload");
+
+      //   await get_players_info_func(game_key);
+      //   return;
+      // }
+
+      // if (
+      //   (user_info.gameInfo === "Search" || user_info.gameInfo === "InGame") &&
+      //   activeSockets.length > 0 &&
+      //   activeSockets[0].rooms.has(playerCurrentRoom)
+      // ) {
+      //   socket.emit("game_error", "already_InGame");
+      //   return;
+      // }
 
       const game_id = game_info._id;
 
@@ -69,10 +107,7 @@ export const GAME = async (socket: Socket) => {
 
       (socket as SocketData).playerId = player_id;
       (socket as SocketData).gameId = updatedGame._id.toString();
-
-      console.log(
-        `Игрок ${player_id} успешно добавлен в игру ${updatedGame._id}`,
-      );
+      gameClients[player_id] = socket.id;
 
       const playerRoom = `InGame:${player_id}`;
       socket.join(playerRoom);
@@ -80,9 +115,15 @@ export const GAME = async (socket: Socket) => {
       const gameRoom = `game_room:${game_info._id}`;
       socket.join(gameRoom);
 
-      (socket as SocketData).playerId = player_id;
-      gameClients[player_id] = socket.id;
+      user_info.gameInfo = "InGame";
+      await user_info.save();
 
+      // (socket as SocketData).playerId = player_id;
+      // gameClients[player_id] = socket.id;
+
+      console.log(
+        `Игрок ${player_id} успешно добавлен в игру ${updatedGame._id}`,
+      );
       await get_players_info_func(game_info.game_key);
     } catch (err) {
       console.log("err", err);
@@ -149,7 +190,7 @@ export const GAME = async (socket: Socket) => {
     }
   }
 
-  async function get_players_info_func(game_key) {
+  async function get_players_info_func(game_key: string) {
     try {
       const game_info = await GamesModel.findOne({ game_key: game_key });
 
@@ -707,61 +748,36 @@ export const GAME = async (socket: Socket) => {
   });
 
   socket.on("disconnect", async () => {
-    console.log("disconnect");
     try {
       const player_id = (socket as SocketData).playerId;
       const game_id = (socket as SocketData).gameId;
 
-      const user_info = await UsersModel.findById(player_id);
-      const game_info = await GamesModel.findById(game_id);
+      const [user_info, updatedGame] = await Promise.all([
+        UsersModel.findById(player_id),
+        GamesModel.findOneAndUpdate(
+          { _id: game_id },
+          { $pull: { "game_online.users": player_id } },
+          { new: true },
+        ),
+      ]);
 
-      if (!game_info || !user_info) {
-        console.log("Игра не найдена.");
+      if (!user_info) {
+        console.log(`Пользователь ${player_id} не найден в базе.`);
         return;
       }
-
-      let updatedGame = await GamesModel.findOneAndUpdate(
-        { _id: game_id },
-        { $pull: { "game_online.users": player_id } },
-        { new: true },
-      );
-
-      const playerRoom = `InGame:${player_id}`;
-      socket.leave(playerRoom);
-
-      user_info.gameInfo = "Default";
-      await user_info.save();
 
       if (!updatedGame) {
         console.log(`Игра ${game_id} не найдена при отключении игрока.`);
         return;
       }
 
-      console.log(`Игрок ${player_id} вышел из игры ${game_id}`);
+      const playerRoom = `InGame:${player_id}`;
+      await socket.leave(playerRoom);
 
-      // setTimeout(async () => {
-      //     if (gameClients[player_id] === socket.id) {
-      //
-      //         let updatedGame = await GamesModel.findOneAndUpdate(
-      //             { _id: game_id },
-      //             { $pull: { 'game_online.users': player_id } },
-      //             { new: true }
-      //         );
-      //
-      //         const playerRoom = `game:${player_id}`;
-      //         socket.leave(playerRoom);
-      //
-      //         user_info.gameInfo = "Default";
-      //         await user_info.save();
-      //
-      //         if (!updatedGame) {
-      //             console.log(`Игра ${game_id} не найдена при отключении игрока.`);
-      //             return;
-      //         }
-      //
-      //         console.log(`Игрок ${player_id} вышел из игры ${game_id}`);
-      //     }
-      // }, 3000);
+      user_info.gameInfo = "Default";
+      await user_info.save();
+
+      console.log(`Игрок ${player_id} вышел из игры ${game_id}`);
     } catch (err) {
       console.log("err", err);
     }
