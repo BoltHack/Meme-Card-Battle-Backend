@@ -129,15 +129,18 @@ class ViewController {
     try {
       const blog_info = await BlogsModel.find({});
 
-      const renderData = blog_info.slice(-3).map((blog) => ({
-        author: blog.author?.name,
-        title: blog.main_content?.title,
-        description: blog.main_content?.description,
-        cover: blog.main_content?.cover,
-        category: blog.category,
-        date: blog.date,
-        id: blog._id,
-      })).reverse();
+      const renderData = blog_info
+        .slice(-3)
+        .map((blog) => ({
+          author: blog.author?.name,
+          title: blog.main_content?.title,
+          description: blog.main_content?.description,
+          cover: blog.main_content?.cover,
+          category: blog.category,
+          date: blog.date,
+          id: blog._id,
+        }))
+        .reverse();
 
       // const renderData = blog_info.slice(-3);
 
@@ -221,29 +224,53 @@ class ViewController {
 
       const cases = case_info.cases;
 
+      const keys = new Map(
+        user_info?.keys.map((k) => [k._id?.toString(), k.count]),
+      );
+
+      const caseData = cases.flatMap((cs) => {
+        if (!cs.content || cs.content.length === 0) return [];
+
+        const caseIdsStr = cs._id.toString();
+
+        const count = keys.get(caseIdsStr) || 0;
+
+        return [
+          {
+            id: cs._id.toString(),
+            name: cs.name,
+            description: cs.description,
+            icon: cs.icon,
+            rarity: cs.rarity,
+            price: cs.price,
+            keys: count,
+          },
+        ];
+      });
+
       // const user_cases = user_info.keys.map((cs) => cs._id);
 
       // console.log("user_cases", user_cases);
 
-      const caseData = cases.map((cs) => {
-        const caseIds = cs._id;
+      // const caseData = cases.map((cs) => {
+      //   const caseIds = cs._id;
 
-        const matchedKeys = user_info.keys.find(
-          (k) => k._id.toString() === caseIds.toString(),
-        );
+      //   const matchedKeys = user_info.keys.find(
+      //     (k) => k._id.toString() === caseIds.toString(),
+      //   );
 
-        const count = matchedKeys ? matchedKeys.count : 0;
+      //   const count = matchedKeys ? matchedKeys.count : 0;
 
-        return {
-          id: cs._id.toString(),
-          name: cs.name,
-          description: cs.description,
-          icon: cs.icon,
-          rarity: cs.rarity,
-          price: cs.price,
-          keys: count,
-        };
-      });
+      //   return {
+      //     id: cs._id.toString(),
+      //     name: cs.name,
+      //     description: cs.description,
+      //     icon: cs.icon,
+      //     rarity: cs.rarity,
+      //     price: cs.price,
+      //     keys: count,
+      //   };
+      // });
 
       const renderData = {
         cases: caseData,
@@ -268,16 +295,22 @@ class ViewController {
 
       const cases = shop_info.cases;
 
-      const caseData = cases.map((cs) => ({
-        id: cs._id.toString(),
-        name: cs.name,
-        description: cs.description,
-        icon: cs.icon,
-        rarity: cs.rarity,
-        quantity: cs.quantity,
-        price: cs.price,
-        priority: cs.priority,
-      }));
+      const caseData = cases.flatMap((cs) => {
+        if (!cs.content || cs.content.length === 0) return [];
+
+        return [
+          {
+            id: cs._id.toString(),
+            name: cs.name,
+            description: cs.description,
+            icon: cs.icon,
+            rarity: cs.rarity,
+            quantity: cs.quantity,
+            price: cs.price,
+            priority: cs.priority,
+          },
+        ];
+      });
 
       return PageRender_v2("auth", caseData)(req, res, next);
     } catch (err) {
