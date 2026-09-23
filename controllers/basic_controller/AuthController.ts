@@ -247,7 +247,7 @@ class AuthController {
       res.clearCookie("refresh_token");
 
       console.log("Выход...");
-      return res.status(200).json({ success: "Успешный выход!" });
+      return res.status(200).json({ success: "Вы вышли из системы" });
     } catch (err) {
       console.error("Ошибка:", err);
       return res.status(500).json({ error: err.message });
