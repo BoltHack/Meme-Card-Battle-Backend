@@ -40,6 +40,7 @@ admin.get(
   verifyPermissions("Admin"),
   PageRender("auth"),
 );
+
 admin.get(
   "/blog/create",
   authenticateJWT,
@@ -77,6 +78,26 @@ admin.get(
   verifyPermissions("Admin"),
   AdminController_View.EditCaseContentView,
 );
+
+admin.get(
+  "/links/create",
+  authenticateJWT,
+  verifyPermissions("Admin"),
+  PageRender("auth"),
+);
+admin.get(
+  "/links/list",
+  authenticateJWT,
+  verifyPermissions("Admin"),
+  AdminController_View.LinksListView,
+);
+admin.get(
+  "/links/:link_id/edit",
+  authenticateJWT,
+  verifyPermissions("Admin"),
+  AdminController_View.EditLinkView,
+);
+
 
 admin.post(
   "/card/create",
@@ -140,6 +161,25 @@ admin.post(
   authenticateJWT,
   verifyPermissions("Admin"),
   AdminController_Post.DeleteCasePost,
+);
+
+admin.post(
+  "/links/create",
+  authenticateJWT,
+  verifyPermissions("Admin"),
+  AdminController_Post.CreateLinkPost,
+);
+admin.post(
+  "/links/:link_id/edit",
+  authenticateJWT,
+  verifyPermissions("Admin"),
+  AdminController_Post.EditLinkPost,
+);
+admin.post(
+  "/links/:link_id/delete",
+  authenticateJWT,
+  verifyPermissions("Admin"),
+  AdminController_Post.DeleteLinkPost,
 );
 
 admin.post(

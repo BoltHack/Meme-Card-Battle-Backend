@@ -10,6 +10,7 @@ import UsersModel from "../../models/UsersModel";
 import BlogsModel from "../../models/BlogsModel";
 import mongoose, { Types } from "mongoose";
 import App_CasesConfigModel from "../../models/admin/App_CasesConfigModel";
+import App_GlobalConfigModel from "../../models/admin/App_GlobalConfigModel";
 
 interface UserData {
   id: string;
@@ -128,8 +129,20 @@ class ViewController {
   ) => {
     try {
       const blog_info = await BlogsModel.find({});
+      const config = await App_GlobalConfigModel.getSettings();
 
-      const renderData = blog_info
+      const linksData = config.links.filter(links => links.main_priority).map((links: any) => {
+        return {
+          id: links._id.toString(),
+          name: links.name,
+          link: links.link,
+          icon: links.icon,
+          priority: Number(links.priority),
+          main_priority: Boolean(links.main_priority),
+        };
+      });
+
+      const blogData = blog_info
         .slice(-3)
         .map((blog) => ({
           author: blog.author?.name,
@@ -142,7 +155,10 @@ class ViewController {
         }))
         .reverse();
 
-      // const renderData = blog_info.slice(-3);
+      const renderData = {
+        linksData: linksData,
+        blogData: blogData,
+      };
 
       return PageRender_v2("no_auth", renderData)(req, res, next);
     } catch (err) {
@@ -247,30 +263,6 @@ class ViewController {
           },
         ];
       });
-
-      // const user_cases = user_info.keys.map((cs) => cs._id);
-
-      // console.log("user_cases", user_cases);
-
-      // const caseData = cases.map((cs) => {
-      //   const caseIds = cs._id;
-
-      //   const matchedKeys = user_info.keys.find(
-      //     (k) => k._id.toString() === caseIds.toString(),
-      //   );
-
-      //   const count = matchedKeys ? matchedKeys.count : 0;
-
-      //   return {
-      //     id: cs._id.toString(),
-      //     name: cs.name,
-      //     description: cs.description,
-      //     icon: cs.icon,
-      //     rarity: cs.rarity,
-      //     price: cs.price,
-      //     keys: count,
-      //   };
-      // });
 
       const renderData = {
         cases: caseData,

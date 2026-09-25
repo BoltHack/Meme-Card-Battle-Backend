@@ -267,6 +267,69 @@ class AdminController_View {
       return res.status(500).json({ error: "Внутренняя ошибка сервера" });
     }
   };
+
+  static LinksListView = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const config = await App_GlobalConfigModel.getSettings();
+
+      const renderData = config.links.map((links: any) => {
+        return {
+          id: links._id.toString(),
+          name: links.name,
+          link: links.link,
+          icon: links.icon,
+          priority: String(links.priority),
+          main_priority: String(links.main_priority),
+        };
+      });
+
+      return PageRender_v2("auth", renderData)(req, res, next);
+    } catch (err) {
+      console.error("Ошибка:", err);
+      return res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    }
+  };
+
+  static EditLinkView = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { link_id } = req.params;
+
+      const errorMsg = "Страница не найдена.";
+
+      if (!mongoose.Types.ObjectId.isValid(link_id)) {
+        return res.status(404).json({ error: errorMsg });
+      }
+
+      const link_info = await App_GlobalConfigModel.getSettings();
+
+      const linkIndex = link_info.links.findIndex(
+        (c) => c._id.toString() === link_id.toString(),
+      );
+
+      const link_data = link_info.links[linkIndex];
+
+      const renderData = {
+        name: link_data.name,
+        link: link_data.link,
+        icon: link_data.icon,
+        priority: link_data.priority,
+        main_priority: link_data.main_priority,
+      };
+
+      return PageRender_v2("auth", renderData)(req, res, next);
+    } catch (err) {
+      console.error("Ошибка:", err);
+      return res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    }
+  };
 }
 
 export default AdminController_View;

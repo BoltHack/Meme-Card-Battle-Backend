@@ -4,12 +4,42 @@ import fs from "fs";
 import mongoose from "mongoose";
 import crypto from "crypto";
 import he from "he";
+import { parse } from "node-html-parser";
+import { optimize } from "svgo";
+
+async function saveAndOptimizeSvg(
+  rawSvg: string,
+  outputPath: string,
+  dir: string,
+) {
+  const result = optimize(rawSvg, {
+    multipass: true,
+    plugins: [
+      "removeDoctype",
+      "removeXMLProcInst",
+      "removeComments",
+      "removeMetadata",
+      "removeEditorsNSData",
+      "cleanupIds",
+      "convertStyleToAttrs",
+    ],
+  });
+
+  const cleanSvg = result.data;
+
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+
+  fs.writeFileSync(outputPath, cleanSvg, "utf8");
+}
 
 import UsersModel from "../../models/UsersModel";
 import CardsModel from "../../models/CardsModel";
 import BlogsModel from "../../models/BlogsModel";
 import AppModel from "../../models/admin/App_GlobalConfigModel";
 import App_CaseConfigModel from "../../models/admin/App_CasesConfigModel";
+import App_GlobalConfigModel from "../../models/admin/App_GlobalConfigModel";
 
 function cleanTextRegex(dirtyInput: string) {
   if (typeof dirtyInput !== "string") return dirtyInput;
@@ -17,6 +47,32 @@ function cleanTextRegex(dirtyInput: string) {
   const decoded = he.decode(dirtyInput);
 
   return decoded.replace(/<\/?[^>]+(>|$)/g, "");
+}
+
+function sanitizeSvgText(dirtySvg: string): string {
+  if (typeof dirtySvg !== "string") return dirtySvg;
+
+  const decoded = he.decode(dirtySvg);
+
+  const root = parse(decoded);
+
+  const scripts = root.querySelectorAll("script");
+  scripts.forEach((script) => script.remove());
+
+  const allElements = root.querySelectorAll("*");
+  allElements.forEach((el) => {
+    const attrs = el.rawAttributes;
+    for (const attrName in attrs) {
+      if (
+        attrName.startsWith("on") ||
+        attrs[attrName].toLowerCase().includes("javascript:")
+      ) {
+        el.removeAttribute(attrName);
+      }
+    }
+  });
+
+  return root.toString().replace(/\s+/g, " ").trim();
 }
 
 const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];
@@ -218,7 +274,7 @@ class AdminController_Post {
 
       return res.status(200).json({ success: "Карта успешно выдана!" });
     } catch (err) {
-      console.error("Ошибка в CreateCardPost:", err);
+      console.error("Ошибка в GetRandomCardPost:", err);
       const errorMessage =
         err instanceof Error ? err.message : "Неизвестная ошибка";
       return res.status(500).json({ error: errorMessage });
@@ -682,6 +738,166 @@ class AdminController_Post {
       });
     } catch (err) {
       console.error("Ошибка в AddNewCardPost:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Неизвестная ошибка";
+      return res.status(500).json({ error: errorMessage });
+    }
+  };
+
+  static CreateLinkPost = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { name, link, icon, priority, main_priority } = req.body;
+
+      const user = req.user;
+      if (!user || user?.role !== "Admin") {
+        return res.status(403).json({ error: "Доступ запрещен." });
+      }
+
+      const link_id = new mongoose.Types.ObjectId();
+      const directionName = link_id.toString();
+
+      // const fileName = `icon_${crypto.randomUUID()}.svg`;
+
+      const safeFileName = `icon_${crypto.randomUUID()}.svg`;
+
+      const uploadDir = path.join(
+        process.cwd(),
+        "public",
+        "uploads",
+        "LinksSvg",
+        directionName,
+      );
+
+      const savePath = path.join(uploadDir, safeFileName);
+
+      await saveAndOptimizeSvg(sanitizeSvgText(icon), savePath, uploadDir);
+
+      const iconFile = `uploads/LinksSvg/${directionName}/${safeFileName}`;
+
+      await App_GlobalConfigModel.findOneAndUpdate(
+        { _id: "global_config_app" },
+        {
+          $push: {
+            links: {
+              _id: link_id,
+              name: name,
+              link: link,
+              icon: iconFile,
+              priority: Number(priority),
+              main_priority: JSON.parse(main_priority),
+            },
+          },
+        },
+      );
+
+      return res.status(200).json({ success: "Новая ссылка добавлена!" });
+    } catch (err) {
+      console.error("Ошибка в CreateLinkPost:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Неизвестная ошибка";
+      return res.status(500).json({ error: errorMessage });
+    }
+  };
+
+  static EditLinkPost = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { link_id } = req.params;
+
+      const { name, link, icon, priority, main_priority } = req.body;
+
+      const user = req.user;
+      if (!user || user?.role !== "Admin") return;
+
+      const link_info = await App_GlobalConfigModel.getSettings();
+
+      const linkIndex = link_info.links.findIndex(
+        (c) => c._id.toString() === link_id.toString(),
+      );
+
+      const link_data = link_info.links[linkIndex];
+
+      let newIcon = "";
+
+      if (link_data.icon !== icon) {
+        const safeFileName = `icon_${crypto.randomUUID()}.svg`;
+
+        const uploadDir = path.join(
+          process.cwd(),
+          "public",
+          "uploads",
+          "LinksSvg",
+          link_id,
+        );
+
+        const savePath = path.join(uploadDir, safeFileName);
+
+        await saveAndOptimizeSvg(sanitizeSvgText(icon), savePath, uploadDir);
+        newIcon = `uploads/LinksSvg/${link_id}/${safeFileName}`;
+      } else {
+        newIcon = icon;
+      }
+
+      const updatedCase = await App_GlobalConfigModel.findOneAndUpdate(
+        {
+          _id: "global_config_app",
+          "links._id": link_id,
+        },
+        {
+          $set: {
+            "links.$.name": name,
+            "links.$.link": link,
+            "links.$.icon": newIcon,
+            "links.$.priority": priority,
+            "links.$.main_priority": main_priority,
+          },
+        },
+        { new: true },
+      );
+
+      if (!updatedCase) {
+        console.log("Кейс не найден.", updatedCase);
+        return res.status(404).json({ error: "Кейс не найден." });
+      }
+
+      return res
+        .status(200)
+        .json({ success: "Данные кейса успешно обновлены!" });
+    } catch (err) {
+      console.error("Ошибка в EditCaseDataPost:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Неизвестная ошибка";
+      return res.status(500).json({ error: errorMessage });
+    }
+  };
+
+  static DeleteLinkPost = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { link_id } = req.params;
+
+      const user = req.user;
+      if (!user || user.role !== "Admin") return;
+
+      await App_GlobalConfigModel.findOneAndUpdate(
+        { _id: "global_config_app" },
+        { $pull: { links: { _id: link_id } } },
+        { new: true },
+      );
+
+      return res.status(200).json({ success: "Ссылка успешно удалена!" });
+    } catch (err) {
+      console.error("Ошибка в DeleteLinkPost:", err);
       const errorMessage =
         err instanceof Error ? err.message : "Неизвестная ошибка";
       return res.status(500).json({ error: errorMessage });

@@ -19,6 +19,13 @@ const App_GlobalConfigSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    links: [{
+      name: { type: String },
+      link: { type: String },
+      icon: { type: String },
+      priority: { type: Number, default: 1, min: 1 },
+      main_priority: { type: Boolean, default: false }
+    }],
     // casesState: {
     //   defaultCase: [
     //     {
