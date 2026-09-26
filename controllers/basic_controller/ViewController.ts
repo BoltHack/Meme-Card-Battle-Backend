@@ -131,16 +131,18 @@ class ViewController {
       const blog_info = await BlogsModel.find({});
       const config = await App_GlobalConfigModel.getSettings();
 
-      const linksData = config.links.filter(links => links.main_priority).map((links: any) => {
-        return {
-          id: links._id.toString(),
-          name: links.name,
-          link: links.link,
-          icon: links.icon,
-          priority: Number(links.priority),
-          main_priority: Boolean(links.main_priority),
-        };
-      });
+      const linksData = config.links
+        .filter((links) => links.main_priority)
+        .map((links: any) => {
+          return {
+            id: links._id.toString(),
+            name: links.name,
+            link: links.link,
+            icon: links.icon,
+            priority: Number(links.priority),
+            main_priority: Boolean(links.main_priority),
+          };
+        });
 
       const blogData = blog_info
         .slice(-3)
@@ -530,7 +532,7 @@ class ViewController {
     }
   };
 
-  static ProfileSettingsView = async (
+  static SettingsView = async (
     req: CustomRequest,
     res: Response,
     next: NextFunction,
@@ -546,7 +548,33 @@ class ViewController {
       const renderData = {
         name: user_info?.name,
         avatar: user_info?.image,
-        role: user_info?.role,
+        createdAt: user_info?.createdAt,
+      };
+
+      return PageRender_v2("auth", renderData)(req, res, next);
+      // return res.status(200).json({  });
+    } catch (err) {
+      console.error("Ошибка:", err);
+      return res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    }
+  };
+
+  static SettingsView_Profile = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const user = req.user as any;
+      const user_info = await UsersModel.findById(user.id);
+
+      if (!user_info) {
+        return res.status(404).json({ error: "Пользователь не найден." });
+      }
+
+      const renderData = {
+        avatar: user_info?.image,
+        aboutMe: user_info?.settings?.profile?.aboutMe,
       };
 
       return PageRender_v2("auth", renderData)(req, res, next);

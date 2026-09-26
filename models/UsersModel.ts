@@ -54,6 +54,16 @@ const UsersSchema = new Schema({
   isOnline: { type: Boolean },
   gameInfo: { type: String, default: "Default" },
 
+  settings: {
+    profile: {
+      aboutMe: { type: String, default: "" },
+    },
+    // notifications: {
+    //   push: { type: Boolean, default: false },
+    //   marketing_and_functions: { type: Boolean, default: false },
+    // },
+  },
+
   refreshTokenHash: { type: String, default: null },
   tokenVersion: { type: Number, default: 0 },
 

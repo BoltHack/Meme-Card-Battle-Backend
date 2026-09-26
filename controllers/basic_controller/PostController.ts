@@ -1,5 +1,8 @@
 import { Request, Response, NextFunction } from "express";
 import mongoose from "mongoose";
+import path from "path";
+import fs from "fs";
+
 import UsersModel from "../../models/UsersModel";
 import CardsModel from "../../models/CardsModel";
 import App_CasesConfigModel from "../../models/admin/App_CasesConfigModel";
@@ -31,6 +34,46 @@ function getRandomCard(pool: any) {
   }
 
   return pool[0];
+}
+
+async function createAvatar(req: any, userId: string, avatar: any) {
+  if (!req.files || !req.files.avatar) {
+    throw new Error("Не удалось загрузить изменения.");
+  }
+
+  const imageFile = req.files.avatar;
+
+  if (!imageFile.mimetype.startsWith("image/")) {
+    throw new Error("Разрешены только файлы изображений.");
+  }
+
+  const fileExt = path.extname(imageFile.name);
+  const safeFileName = `${userId}${fileExt}`;
+
+  const imagePath = `uploads/UserCovers/${safeFileName}`;
+
+  const uploadDir = path.join(process.cwd(), "public", "uploads", "UserCovers");
+  const savePath = path.join(uploadDir, safeFileName);
+
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  }
+
+  // imageFile.mv(savePath, (err: any) => {
+  //   if (err) {
+  //     console.error("Ошибка при сохранении файла:", err);
+  //     return res.status(500).json({ error: "Ошибка при сохранении файла" });
+  //   }
+  // });
+
+  await new Promise<void>((resolve, reject) => {
+    imageFile.mv(savePath, (err: any) => {
+      if (err) reject(err);
+      else resolve();
+    });
+  });
+
+  return imagePath;
 }
 
 class PostController {
@@ -299,16 +342,16 @@ class PostController {
       if (user_cards_count >= 150) {
         return res.status(403).json({ error: "Ваш инвентарь переполнен." });
       }
-        // const user_keys = user_info.keys.find(
-        //   (ct) => ct._id.toString() === case_data._id.toString(),
-        // );
+      // const user_keys = user_info.keys.find(
+      //   (ct) => ct._id.toString() === case_data._id.toString(),
+      // );
 
-        const case_map = case_data.content.map((c) => {
-          return {
-            id: c._id.toString(),
-            chance: c.chance,
-          };
-        });
+      const case_map = case_data.content.map((c) => {
+        return {
+          id: c._id.toString(),
+          chance: c.chance,
+        };
+      });
 
       const result = getRandomCard(case_map);
 
@@ -368,6 +411,46 @@ class PostController {
       };
 
       return res.status(200).json({ success: "Выигрыш!", card: card_data });
+    } catch (err) {
+      console.error("Ошибка:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Неизвестная ошибка";
+      return res.status(500).json({ error: errorMessage });
+    }
+  };
+
+  static SaveSettingsProfile = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { aboutMe, isDelete } = req.body;
+      const avatar = req.files;
+
+      const user = req.user as any;
+      const deleteAvatar = Boolean(isDelete);
+
+      const updateData: Record<string, any> = {};
+
+      if (!deleteAvatar && avatar && (avatar as any).avatar) {
+        updateData["image"] = await createAvatar(req, user.id, avatar);
+      }
+      if (deleteAvatar) {
+        updateData["image"] = "";
+      }
+
+      if (aboutMe !== undefined) {
+        updateData["settings.profile.aboutMe"] = aboutMe;
+      }
+
+      if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({ error: "Нет данных для обновления" });
+      }
+
+      await UsersModel.findOneAndUpdate({ _id: user.id }, { $set: updateData });
+
+      return res.status(200).json({ success: "Настройки профиля сохранены!" });
     } catch (err) {
       console.error("Ошибка:", err);
       const errorMessage =

@@ -27,30 +27,44 @@ router.get(
 
 router.get(
   "/profile",
-  authenticateJWT,
   CheckMaintenanceMode,
+  authenticateJWT,
   ViewController.ProfileView,
 );
 
 router.get(
   "/cases",
-  authenticateJWT,
   CheckMaintenanceMode,
+  authenticateJWT,
   ViewController.CasesView,
 );
 
 router.get(
   "/shop",
-  authenticateJWT,
   CheckMaintenanceMode,
+  authenticateJWT,
   ViewController.ShopView,
 );
 
 router.get(
-  "/settings/profile",
-  authenticateJWT,
+  "/settings",
   CheckMaintenanceMode,
-  ViewController.ProfileSettingsView,
+  authenticateJWT,
+  ViewController.SettingsView,
+);
+
+router.get(
+  "/settings/profile",
+  CheckMaintenanceMode,
+  authenticateJWT,
+  ViewController.SettingsView_Profile,
+);
+
+router.get(
+  "/settings/notifications",
+  CheckMaintenanceMode,
+  authenticateJWT,
+  PageRender("auth"),
 );
 
 router.get(
@@ -106,6 +120,12 @@ router.post(
   "/case/:case_id/open",
   authenticateJWT,
   PostController.OpenCasePost,
+);
+
+router.post(
+  "/save-settings/profile",
+  authenticateJWT,
+  PostController.SaveSettingsProfile,
 );
 
 // router.post('/play-game/:game_type', authenticateJWT, PostController.PlayGame);

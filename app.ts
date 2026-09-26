@@ -179,7 +179,7 @@ async function gameFountTimer(socket: any, player_id: string) {
 }
 
 io.on("connection", async (socket) => {
-  console.log(`Пользователь ${socket.id} подключился к дефолтному сокету.`);
+  console.log(`Пользователь ${socket.id} подключился к основному сокету.`);
 
   socket.on("user_register", async (data) => {
     const { player_id } = data;
@@ -232,8 +232,8 @@ io.on("connection", async (socket) => {
 
         console.log("game type default");
 
-        // user_info.gameInfo = "Default";
-        // await user_info.save();
+        user_info.gameInfo = "Default";
+        await user_info.save();
       } else {
         console.log("error");
       }
@@ -338,10 +338,10 @@ io.on("connection", async (socket) => {
   });
 
   socket.on("disconnect", async () => {
-    console.log(`Пользователь ${socket.id} отключился от дефолтного сокета.`);
+    console.log(`Пользователь ${socket.id} отключился от основного сокета.`);
 
     const player_id = (socket as SocketData).playerId;
-    if (player_id) return;
+    if (!player_id) return;
 
     const user_info = await UsersModel.findById(player_id);
 
@@ -353,19 +353,23 @@ io.on("connection", async (socket) => {
     if (activeSockets.length > 0 && activeSockets[0].rooms.has(playerRoom))
       return;
 
+    // let timer;
+
     const disconnectedSocketId = socket.id;
 
-    if (timer[player_id]) {
-      clearTimeout(timer[player_id]);
-    }
+    // if (timer[player_id]) {
+    //   clearTimeout(timer[player_id]);
+    // }
 
     setTimeout(async () => {
+      console.log("Проверка отключения");
       if (clients[player_id] === disconnectedSocketId) {
         console.log(`${player_id} не в сети.`);
 
-        user_info.isOnline = false;
-        user_info.gameInfo = "Default";
-        await user_info.save();
+        await UsersModel.findByIdAndUpdate(player_id, {
+          isOnline: false,
+          gameInfo: "Default",
+        });
 
         if (clients[player_id] === disconnectedSocketId) {
           delete clients[player_id];
