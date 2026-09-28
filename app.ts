@@ -116,6 +116,7 @@ async function gameFountTimer(socket: any, player_id: string) {
           {
             _id: user_info._id as any,
             user_name: user_info.name as any,
+            user_avatar: user_info.image as any,
             user_type: "Player",
             user_isReady: false,
             user_lvl: user_info.lvl as any,
@@ -127,6 +128,7 @@ async function gameFountTimer(socket: any, player_id: string) {
           {
             _id: matched_user._id as any,
             user_name: matched_user.name as any,
+            user_avatar: matched_user.image as any,
             user_type: "Player",
             user_isReady: false,
             user_lvl: matched_user.lvl as any,
@@ -193,8 +195,12 @@ io.on("connection", async (socket) => {
       if (clients[player_id] === socket.id) {
         console.log(`${player_id} в сети.`);
 
-        user_info.isOnline = true;
-        user_info.gameInfo = "Default";
+        // user_info.isOnline = true;
+        // user_info.gameInfo = "Default";
+        await UsersModel.updateOne(
+          { _id: player_id },
+          { $set: { isOnline: true, gameInfo: "Default" } },
+        );
         await user_info.save();
       }
     } catch (err) {
@@ -232,10 +238,14 @@ io.on("connection", async (socket) => {
 
         console.log("game type default");
 
-        user_info.gameInfo = "Default";
-        await user_info.save();
+        // user_info.gameInfo = "Default";
+        // await user_info.save();
+        await UsersModel.updateOne(
+          { _id: player_id },
+          { $set: { gameInfo: "Default" } },
+        );
       } else {
-        console.log("error");
+        console.log("Ошибка. Противник не найден.");
       }
     } catch (err) {
       console.log("err", err);
@@ -322,6 +332,7 @@ io.on("connection", async (socket) => {
   });
 
   socket.on("game_start", async (type) => {
+    console.log("game_start", type);
     let isBotActive = false;
 
     if (type === "player_bot") {

@@ -19,17 +19,18 @@ interface PlayerData {
   myCards: any;
 }
 
-function getRandomMoney(min, max) {
+function getRandomMoney(min: number, max: number) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 const gameClients: Record<string, string> = {};
 let timers: Record<number, number> = {};
 
-export const GAME = async (socket: Socket) => {
+export const GAME = (socket: Socket) => {
   console.log(`Пользователь ${socket.id} подключился к игре.`);
 
   socket.on("join_game", async (data: any) => {
+    console.log("join game");
     const { game_key, player_id } = data;
     try {
       const [user_info, game_info] = await Promise.all([
@@ -130,7 +131,7 @@ export const GAME = async (socket: Socket) => {
     }
   });
 
-  async function get_cards_func(arr) {
+  async function get_cards_func(arr: any) {
     try {
       const ids = arr.map((c) => c.card_id.toString());
 
@@ -198,8 +199,9 @@ export const GAME = async (socket: Socket) => {
 
       const players_info = game_info.users_battle_info.map((ubi) => {
         return {
-          id: ubi?._id,
+          id: ubi?._id.toString(),
           name: ubi?.user_name,
+          avatar: ubi?.user_avatar,
           lvl: ubi?.user_lvl,
           health: ubi?.user_health,
           ult: ubi?.user_ult,
@@ -216,7 +218,7 @@ export const GAME = async (socket: Socket) => {
     }
   }
 
-  async function set_winner_func(userId) {
+  async function set_winner_func(userId: string) {
     try {
       const user_info = await UsersModel.findById(userId);
 
@@ -227,7 +229,7 @@ export const GAME = async (socket: Socket) => {
     }
   }
 
-  async function game_selected_cards_result_func(socket, gameId) {
+  async function game_selected_cards_result_func(socket: any, gameId: string) {
     try {
       const game_info = (await GamesModel.findById(gameId)) as GameData;
 
@@ -340,7 +342,7 @@ export const GAME = async (socket: Socket) => {
     }
   }
 
-  async function clear_selected_cards_func(gameId) {
+  async function clear_selected_cards_func(gameId: string) {
     try {
       const game_info = await GamesModel.findById(gameId);
 
@@ -373,8 +375,8 @@ export const GAME = async (socket: Socket) => {
     }
   }
 
-  async function start_cooldown_func(socket, gameId, game_key, startTime) {
-    const gameTimerId = gameId.toString();
+  async function start_cooldown_func(socket: any, gameId: string, game_key: string, startTime: number) {
+    const gameTimerId: string = gameId.toString();
     try {
       game_selected_cards_result_func(socket, gameId);
       if (timers[gameTimerId]) {
@@ -668,6 +670,10 @@ export const GAME = async (socket: Socket) => {
 
   socket.on("select_card", async (data) => {
     const { game_key, player_id, enemy_id, card_id } = data;
+    console.log("game_key", game_key);
+    console.log("player_id", player_id);
+    console.log("enemy_id", enemy_id);
+    console.log("card_id", card_id);
     try {
       console.log("select_card...");
       const game_info = await GamesModel.findOne({ game_key: game_key });
@@ -748,6 +754,7 @@ export const GAME = async (socket: Socket) => {
   });
 
   socket.on("disconnect", async () => {
+    console.log("game disconnect");
     try {
       const player_id = (socket as SocketData).playerId;
       const game_id = (socket as SocketData).gameId;
