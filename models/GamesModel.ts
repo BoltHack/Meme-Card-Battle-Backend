@@ -37,26 +37,9 @@ const GamesSchema = new Schema({
             }
         },
     }],
-    // bot_battle_info: {
-    //     bot_mode: { type: String },
-    //     bot_id: { type: String },
-    //     bot_name: { type: String },
-    //     bot_health: { type: Number, default: 100 },
-    //     bot_ult: { type: Number, default: 0 },
-    //     bot_cards: {
-    //         battle_cards: [{
-    //             _id: false,
-    //             card_id: { type: Schema.Types.ObjectId, ref: 'Cards' },
-    //             bot_base_card_id: { type: String },
-    //         }],
-    //         select_card: {
-    //             type: String
-    //         }
-    //     },
-    // },
-    winner: {
-        type: String,
-        default: ""
+    game_started: {
+        type: Boolean,
+        default: false
     },
     createdAt: {
         type: Date,

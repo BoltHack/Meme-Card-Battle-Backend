@@ -9,6 +9,7 @@ import fileUpload from "express-fileupload";
 import { Server, Socket } from "socket.io";
 
 import indexRouter from "./routes/index.ts";
+import playRouter from "./routes/play.ts";
 import authRouter from "./routes/auth";
 import adminRouter from "./routes/admin";
 
@@ -427,6 +428,7 @@ app.use(
 
 app.use(cookiesData);
 app.use("/api", indexRouter);
+app.use("/play", playRouter);
 app.use("/auth", authRouter);
 app.use("/admin", adminRouter);
 

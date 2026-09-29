@@ -64,34 +64,6 @@ export const GAME = (socket: Socket) => {
         return;
       }
 
-      // if (user_info.gameInfo === "InGame") {
-      //   console.log(
-      //     `Игрок ${player_id} перезагрузил страницу или вылетел. Кикаем из игры.`,
-      //   );
-
-      //   await GamesModel.findOneAndUpdate(
-      //     { game_key: game_key },
-      //     { $pull: { "game_online.users": player_id } },
-      //   );
-
-      //   user_info.gameInfo = "Default";
-      //   await user_info.save();
-
-      //   socket.emit("game_error", "game_abandoned_due_to_reload");
-
-      //   await get_players_info_func(game_key);
-      //   return;
-      // }
-
-      // if (
-      //   (user_info.gameInfo === "Search" || user_info.gameInfo === "InGame") &&
-      //   activeSockets.length > 0 &&
-      //   activeSockets[0].rooms.has(playerCurrentRoom)
-      // ) {
-      //   socket.emit("game_error", "already_InGame");
-      //   return;
-      // }
-
       const game_id = game_info._id;
 
       let updatedGame = await GamesModel.findOneAndUpdate(
@@ -229,7 +201,7 @@ export const GAME = (socket: Socket) => {
     }
   }
 
-  async function game_selected_cards_result_func(socket: any, gameId: string) {
+  async function game_selected_cards_result_func(gameId: string) {
     try {
       const game_info = (await GamesModel.findById(gameId)) as GameData;
 
@@ -375,10 +347,15 @@ export const GAME = (socket: Socket) => {
     }
   }
 
-  async function start_cooldown_func(socket: any, gameId: string, game_key: string, startTime: number) {
+  async function start_cooldown_func(
+    socket: any,
+    gameId: string,
+    game_key: string,
+    startTime: number,
+  ) {
     const gameTimerId: string = gameId.toString();
     try {
-      game_selected_cards_result_func(socket, gameId);
+      game_selected_cards_result_func(gameId);
       if (timers[gameTimerId]) {
         clearTimeout(timers[gameTimerId]);
         delete timers[gameTimerId];
@@ -415,6 +392,55 @@ export const GAME = (socket: Socket) => {
         }
       };
       await tick();
+    } catch (error) {
+      console.log("error", error);
+    }
+  }
+
+  async function check_game_online_to_end(game_key: string) {
+    try {
+      const game_info = await GamesModel.findOne({ game_key: game_key });
+
+      if (!game_info) {
+        throw new Error("Игра не найдена");
+      }
+
+      const gameRoom = `game_room:${game_info._id.toString()}`;
+
+      const playerIds = game_info.users_battle_info.map((ubi) =>
+        ubi._id.toString(),
+      );
+
+      for (const ubi of game_info.users_battle_info) {
+        const currentPlayerId = ubi._id.toString();
+
+        if (!ubi.user_isReady && !game_info.game_started) {
+          console.log("Игрок вышел до начала игры.");
+          if (game_info.game_online.users.length === 0) {
+            
+          } 
+          return;
+        }
+        console.log("Игрок вышел во время игры");
+
+        const winnerId = playerIds.find((pId) => pId !== currentPlayerId);
+
+        console.log("winnerId", winnerId);
+
+        io.to(gameRoom).emit("game_cards_selected_result", {
+          type: "result",
+          gameData: {
+            winnerId: winnerId,
+            result: {
+              status: "autowin",
+              damage: 100,
+              winnerId: winnerId,
+            },
+          },
+        });
+
+        return;
+      }
     } catch (error) {
       console.log("error", error);
     }
@@ -754,7 +780,6 @@ export const GAME = (socket: Socket) => {
   });
 
   socket.on("disconnect", async () => {
-    console.log("game disconnect");
     try {
       const player_id = (socket as SocketData).playerId;
       const game_id = (socket as SocketData).gameId;
@@ -783,6 +808,8 @@ export const GAME = (socket: Socket) => {
 
       user_info.gameInfo = "Default";
       await user_info.save();
+
+      await check_game_online_to_end(updatedGame.game_key);
 
       console.log(`Игрок ${player_id} вышел из игры ${game_id}`);
     } catch (err) {

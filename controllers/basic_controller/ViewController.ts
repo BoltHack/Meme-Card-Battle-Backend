@@ -577,8 +577,9 @@ class ViewController {
         aboutMe: user_info?.settings?.profile?.aboutMe,
       };
 
+      // res.status(200).json({ success: "Данные отправлены", renderData: renderData });
+
       return PageRender_v2("auth", renderData)(req, res, next);
-      // return res.status(200).json({  });
     } catch (err) {
       console.error("Ошибка:", err);
       return res.status(500).json({ error: "Внутренняя ошибка сервера" });

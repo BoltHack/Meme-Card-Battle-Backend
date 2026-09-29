@@ -3,68 +3,19 @@ import express from "express";
 import ViewController from "../controllers/basic_controller/ViewController";
 // import PostController from "../controllers/basic_controller/PostController";
 
-import authenticateJWT from "../middlewares/authenticateJWT";
+// import authenticateJWT from "../middlewares/authenticateJWT";
 import CheckMaintenanceMode from "../middlewares/CheckMaintenanceMode";
 import { PageRender } from "../middlewares/PageRender";
-import PostController from "../controllers/basic_controller/PostController";
+// import PostController from "../controllers/basic_controller/PostController";
 
 const router = express.Router();
 
 router.get("/", CheckMaintenanceMode, ViewController.MainView);
 
 router.get(
-  "/play",
-  CheckMaintenanceMode,
-  authenticateJWT,
-  ViewController.PlayView,
-);
-
-router.get(
   "/help-center",
   CheckMaintenanceMode,
   ViewController.ReadPage_json("help-center_categories"),
-);
-
-router.get(
-  "/profile",
-  CheckMaintenanceMode,
-  authenticateJWT,
-  ViewController.ProfileView,
-);
-
-router.get(
-  "/cases",
-  CheckMaintenanceMode,
-  authenticateJWT,
-  ViewController.CasesView,
-);
-
-router.get(
-  "/shop",
-  CheckMaintenanceMode,
-  authenticateJWT,
-  ViewController.ShopView,
-);
-
-router.get(
-  "/settings",
-  CheckMaintenanceMode,
-  authenticateJWT,
-  ViewController.SettingsView,
-);
-
-router.get(
-  "/settings/profile",
-  CheckMaintenanceMode,
-  authenticateJWT,
-  ViewController.SettingsView_Profile,
-);
-
-router.get(
-  "/settings/notifications",
-  CheckMaintenanceMode,
-  authenticateJWT,
-  PageRender("auth"),
 );
 
 router.get(
@@ -96,37 +47,6 @@ router.get("/bot-settings", CheckMaintenanceMode, PageRender("auth"));
 router.get("/game-settings", CheckMaintenanceMode, PageRender("auth"));
 
 // router.get('/game/:adversary', authenticateJWT, ViewController.GameView);
-router.get(
-  "/game/:game_type/:game_key",
-  CheckMaintenanceMode,
-  authenticateJWT,
-  ViewController.GameView,
-);
-
-router.post(
-  "/cards/get/:cards_category",
-  authenticateJWT,
-  PostController.GetCardsPost,
-);
-
-router.post(
-  "/case/:case_id/content/get",
-  authenticateJWT,
-  PostController.GetCaseContentPost,
-);
-
-router.post("/case/:case_id/buy", authenticateJWT, PostController.BuyCasePost);
-router.post(
-  "/case/:case_id/open",
-  authenticateJWT,
-  PostController.OpenCasePost,
-);
-
-router.post(
-  "/save-settings/profile",
-  authenticateJWT,
-  PostController.SaveSettingsProfile,
-);
 
 // router.post('/play-game/:game_type', authenticateJWT, PostController.PlayGame);
 
