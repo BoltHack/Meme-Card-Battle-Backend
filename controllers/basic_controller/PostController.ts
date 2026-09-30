@@ -214,6 +214,7 @@ class PostController {
   ) => {
     try {
       const { case_id } = req.params;
+      const { case_quantity } = req.body;
 
       const user = req.user as any;
 
@@ -233,16 +234,17 @@ class PostController {
         return res.status(404).json({ error: "Кейс не найден" });
       }
 
-      const case_price = Number(case_data.price);
-      const case_quantity = Number(case_data.quantity);
+      const case_final_price = Number(case_data.price) * Number(case_quantity);
+
+      const case_final_quantity = Number(case_quantity);
 
       const user_info = await UsersModel.findOneAndUpdate(
         {
           _id: user.id,
-          coins: { $gte: case_price },
+          coins: { $gte: case_final_price },
         },
         {
-          $inc: { coins: -case_price },
+          $inc: { coins: -case_final_price },
         },
         {
           new: true,
@@ -261,7 +263,7 @@ class PostController {
         await UsersModel.updateOne(
           { _id: user.id, "keys._id": case_id },
           {
-            $inc: { "keys.$.count": case_quantity },
+            $inc: { "keys.$.count": case_final_quantity },
           },
         );
       } else {
@@ -271,7 +273,7 @@ class PostController {
             $push: {
               keys: {
                 _id: case_id,
-                count: case_quantity,
+                count: case_final_quantity,
               },
             },
           },
@@ -283,7 +285,7 @@ class PostController {
         coins: user_info.coins,
         shopData: {
           product: case_data.name,
-          quantity: case_quantity,
+          quantity: case_final_quantity,
         },
       });
     } catch (err) {

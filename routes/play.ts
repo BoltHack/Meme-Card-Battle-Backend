@@ -104,7 +104,11 @@ play.post(
   PostController.GetCaseContentPost,
 );
 
-play.post("/case/:case_id/buy", authenticateJWT, PostController.BuyCasePost);
+play.post(
+  "/case/:case_id/buy",
+  authenticateJWT,
+  PostController.BuyCasePost,
+);
 play.post("/case/:case_id/open", authenticateJWT, PostController.OpenCasePost);
 
 play.post(
