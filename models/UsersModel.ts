@@ -1,33 +1,5 @@
 import { Schema, model, InferSchemaType } from "mongoose";
 
-// interface IUser {
-//     name: string;
-//     friendName: string;
-//     email: string;
-//     password?: string;
-//     image: string;
-//     registerDate: Date;
-//     refreshTokenHash: string | null;
-//     tokenVersion: number;
-//     role: string;
-//     ip: string;
-//     onlineMod?: string;
-//     createdAt: Date;
-//     expiresAt?: Date;
-// }
-
-// const UserCardSchema = new Schema({
-//     card_id: { type: Schema.Types.ObjectId, ref: "Card" }
-// }, { _id: false });
-
-// const keysSchema = new Schema(
-//   {
-//     case_id: { type: String },
-//     count: { type: Number, default: 0 },
-//   },
-//   { _id: false },
-// );
-
 const UsersSchema = new Schema({
   name: { type: String, required: true },
   requestName: { type: String, required: true, unique: true },
@@ -51,17 +23,31 @@ const UsersSchema = new Schema({
     { card_id: { type: String }, quantity: { type: Number, default: 1 } },
   ],
 
-  isOnline: { type: Boolean },
+  isOnline: { type: Boolean, default: false },
   gameInfo: { type: String, default: "Default" },
 
   settings: {
     profile: {
       aboutMe: { type: String, default: "" },
     },
-    // notifications: {
-    //   push: { type: Boolean, default: false },
-    //   marketing_and_functions: { type: Boolean, default: false },
-    // },
+  },
+
+  friends: {
+    list: [
+      {
+        _id: { type: Schema.Types.ObjectId, ref: "user" },
+      },
+    ],
+    requestsForMe: [
+      {
+        _id: { type: Schema.Types.ObjectId, ref: "user" },
+      },
+    ],
+    requestsFromMe: [
+      {
+        _id: { type: Schema.Types.ObjectId, ref: "user" },
+      },
+    ],
   },
 
   refreshTokenHash: { type: String, default: null },

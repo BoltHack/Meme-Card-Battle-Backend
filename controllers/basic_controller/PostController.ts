@@ -419,7 +419,7 @@ class PostController {
     }
   };
 
-  static SaveSettingsProfile = async (
+  static SaveSettingsProfilePost = async (
     req: CustomRequest,
     res: Response,
     next: NextFunction,
@@ -459,7 +459,303 @@ class PostController {
     }
   };
 
-  // static PlayGame = async (req: CustomRequest, res: Response, next: NextFunction)=> {
+  static FriendSendRequestPost = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { requestName, requesterID } = req.body;
+
+      const name = requestName.toLowerCase();
+
+      const [user_info, requester_info] = await Promise.all([
+        UsersModel.findOne({ requestName: name }),
+        UsersModel.findById(requesterID),
+      ]);
+
+      if (!user_info || !requester_info) {
+        return res.status(404).json({ error: "Пользователь не найден." });
+      }
+
+      if (requester_info.requestName === name) {
+        return res
+          .status(403)
+          .json({ error: "Вы не можете отправить запрос самому себе." });
+      }
+
+      if (
+        user_info.friends.list.find((rfm) => rfm._id.toString() === requesterID)
+      ) {
+        return res
+          .status(403)
+          .json({ error: "Данные пользователь уже в вашем списке друзей." });
+      }
+
+      if (
+        requester_info?.friends?.requestsForMe.find(
+          (rfm) => rfm._id.toString() === requesterID,
+        )
+      ) {
+        return res
+          .status(403)
+          .json({ error: "Вы уже отправили запрос этому пользователю." });
+      }
+
+      await UsersModel.findOneAndUpdate(
+        { _id: requesterID },
+        {
+          $addToSet: {
+            "friends.requestsFromMe": {
+              _id: user_info.id,
+            },
+          },
+        },
+        { new: true },
+      );
+
+      await UsersModel.findOneAndUpdate(
+        { _id: user_info._id },
+        {
+          $addToSet: {
+            "friends.requestsForMe": {
+              _id: requesterID,
+            },
+          },
+        },
+        { new: true },
+      );
+
+      const renderData = {
+        id: user_info?.id,
+        name: user_info?.name,
+        lvl: user_info?.lvl,
+        gameInfo: user_info?.gameInfo,
+        isOnline: user_info?.isOnline,
+      };
+
+      return res.status(200).json({
+        success: "Запрос успешно отправлен.",
+        renderData: renderData,
+      });
+    } catch (err) {
+      console.error("Ошибка:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Неизвестная ошибка";
+      return res.status(500).json({ error: errorMessage });
+    }
+  };
+
+  static FriendCalcenRequestPost = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { requestID } = req.body;
+
+      const user = req.user as any;
+
+      const [user_info, request_info] = await Promise.all([
+        UsersModel.findById(user.id),
+        UsersModel.findById(requestID),
+      ]);
+
+      if (!user_info || !request_info) {
+        return res.status(404).json({ error: "Пользователь не найден." });
+      }
+
+      await UsersModel.findOneAndUpdate(
+        { _id: requestID },
+        {
+          $pull: {
+            "friends.requestsForMe": {
+              _id: user_info.id,
+            },
+          },
+        },
+        { new: true },
+      );
+
+      await UsersModel.findOneAndUpdate(
+        { _id: user.id },
+        {
+          $pull: {
+            "friends.requestsFromMe": {
+              _id: requestID,
+            },
+          },
+        },
+        { new: true },
+      );
+
+      return res.status(200).json({
+        success: "Запрос успешно отправлен.",
+        requestID: requestID,
+      });
+    } catch (err) {
+      console.error("Ошибка:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Неизвестная ошибка";
+      return res.status(500).json({ error: errorMessage });
+    }
+  };
+
+  static RequestActionPost = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { requester_id, action } = req.params;
+      const user = req.user as any;
+
+      const [user_info, requester_info] = await Promise.all([
+        UsersModel.findById(user.id),
+        UsersModel.findById(requester_id),
+      ]);
+
+      if (!user_info || !requester_info) {
+        return res.status(404).json({ error: "Пользователь не найден." });
+      }
+
+      if (action === "reject") {
+        await UsersModel.findOneAndUpdate(
+          { _id: user.id },
+          {
+            $pull: {
+              "friends.requestsForMe": {
+                _id: requester_id,
+              },
+            },
+          },
+          { new: true },
+        );
+
+        await UsersModel.findOneAndUpdate(
+          { _id: requester_id },
+          {
+            $pull: {
+              "friends.requestsFromMe": {
+                _id: user.id,
+              },
+            },
+          },
+          { new: true },
+        );
+        return res.status(200).json({ success: "Данные удалены." });
+      }
+      if (action === "accept") {
+        if (
+          !user_info.friends?.requestsForMe.find(
+            (fr) => fr._id?.toString() === requester_id,
+          )
+        )
+          return res.status(404).json({ error: "Данный пользователь не отправлял вам никаких запросов." });
+
+        await UsersModel.findOneAndUpdate(
+          { _id: requester_id },
+          {
+            $addToSet: {
+              "friends.list": {
+                _id: user.id,
+              },
+            },
+            $pull: {
+              "friends.requestsFromMe": {
+                _id: user.id,
+              },
+            },
+          },
+          { new: true },
+        );
+
+        await UsersModel.findOneAndUpdate(
+          { _id: user.id },
+          {
+            $addToSet: {
+              "friends.list": {
+                _id: requester_id,
+              },
+            },
+            $pull: {
+              "friends.requestsForMe": {
+                _id: requester_id,
+              },
+            },
+          },
+          { new: true },
+        );
+        return res.status(200).json({ success: "Данные добавлены." });
+      }
+    } catch (err) {
+      console.error("Ошибка:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Неизвестная ошибка";
+      return res.status(500).json({ error: errorMessage });
+    }
+  };
+
+  static RemoveFriendPost = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { friend_id } = req.params;
+      const user = req.user as any;
+
+      const [user_info, friend_info] = await Promise.all([
+        UsersModel.findById(user.id),
+        UsersModel.findById(friend_id),
+      ]);
+
+      if (!user_info || !friend_info) {
+        return res.status(404).json({ error: "Пользователь не найден." });
+      }
+
+      if (
+        user_info.friends.list.find((rfm) => rfm._id.toString() === friend_id)
+      ) {
+        await UsersModel.findOneAndUpdate(
+          { _id: user.id },
+          {
+            $pull: {
+              "friends.list": {
+                _id: friend_id,
+              },
+            },
+          },
+          { new: true },
+        );
+        await UsersModel.findOneAndUpdate(
+          { _id: friend_id },
+          {
+            $pull: {
+              "friends.list": {
+                _id: user.id,
+              },
+            },
+          },
+          { new: true },
+        );
+        return res.status(200).json({
+          success: `Вы удалили ${friend_info.name} из спизка друзей.`,
+        });
+      } else {
+        return res.status(500).json({
+          error: `Не удалось удалить ${friend_info.name} из спизка друзей.`,
+        });
+      }
+    } catch (err) {
+      console.error("Ошибка:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Неизвестная ошибка";
+      return res.status(500).json({ error: errorMessage });
+    }
+  };
+
+  // static PlayGame = async (req: CustomRequest, res: Response, next: NextFunction) => {
   //     try {
   //         const { game_type } = req.params;
   //

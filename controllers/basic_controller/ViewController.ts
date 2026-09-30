@@ -585,6 +585,196 @@ class ViewController {
       return res.status(500).json({ error: "Внутренняя ошибка сервера" });
     }
   };
+
+  static FriendListView = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const user = req.user as any;
+      const user_info = await UsersModel.findById(user.id);
+
+      if (!user_info) {
+        return res.status(404).json({ error: "Пользователь не найден." });
+      }
+
+      const userFriendIds = user_info?.friends?.list.map((fr) =>
+        fr._id.toString(),
+      );
+
+      const players = await UsersModel.find({ _id: { $in: userFriendIds } });
+
+      const list = players.map((u) => {
+        return {
+          id: u?.id,
+          name: u?.name,
+          lvl: u?.lvl,
+          gameInfo: u?.gameInfo,
+          isOnline: u?.isOnline,
+        };
+      });
+
+      const renderData = {
+        list: list,
+        friendListLength: user_info.friends.list.length ?? 0,
+        requestsForMeListLength: user_info.friends.requestsForMe.length ?? 0,
+      };
+
+      // return res
+      //   .status(200)
+      //   .json({ success: "Данные отправлены.", renderData: renderData });
+      return PageRender_v2("auth", renderData)(req, res, next);
+    } catch (err) {
+      console.error("Ошибка:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Неизвестная ошибка";
+      return res.status(500).json({ error: errorMessage });
+    }
+  };
+
+  static RequestsForMeListView = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const user = req.user as any;
+      const user_info = await UsersModel.findById(user.id);
+
+      if (!user_info) {
+        return res.status(404).json({ error: "Пользователь не найден." });
+      }
+
+      const userFriendIds = user_info?.friends?.requestsForMe.map((fr) =>
+        fr._id.toString(),
+      );
+
+      const players = await UsersModel.find({ _id: { $in: userFriendIds } });
+
+      const list = players.map((u) => {
+        return {
+          id: u?.id,
+          name: u?.name,
+          lvl: u?.lvl,
+          gameInfo: u?.gameInfo,
+          isOnline: u?.isOnline,
+        };
+      });
+
+      const renderData = {
+        list: list,
+        friendListLength: user_info.friends.list.length ?? 0,
+        requestsForMeListLength: user_info.friends.requestsForMe.length ?? 0,
+      };
+
+      // return res
+      //   .status(200)
+      //   .json({ success: "Данные отправлены.", renderData: renderData });
+      return PageRender_v2("auth", renderData)(req, res, next);
+    } catch (err) {
+      console.error("Ошибка:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Неизвестная ошибка";
+      return res.status(500).json({ error: errorMessage });
+    }
+  };
+
+  static RequestsFromMeListView = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const user = req.user as any;
+      const user_info = await UsersModel.findById(user.id);
+
+      if (!user_info) {
+        return res.status(404).json({ error: "Пользователь не найден." });
+      }
+
+      const userFriendIds = user_info?.friends?.requestsFromMe.map((fr) =>
+        fr._id.toString(),
+      );
+
+      const players = await UsersModel.find({ _id: { $in: userFriendIds } });
+
+      const list = players.map((u) => {
+        return {
+          id: u?.id,
+          name: u?.name,
+          lvl: u?.lvl,
+          gameInfo: u?.gameInfo,
+          isOnline: u?.isOnline,
+        };
+      });
+
+      const renderData = {
+        list: list,
+        friendListLength: user_info.friends.list.length ?? 0,
+        requestsForMeListLength: user_info.friends.requestsForMe.length ?? 0,
+      };
+
+      // return res
+      //   .status(200)
+      //   .json({ success: "Данные отправлены.", renderData: renderData });
+      return PageRender_v2("auth", renderData)(req, res, next);
+    } catch (err) {
+      console.error("Ошибка:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Неизвестная ошибка";
+      return res.status(500).json({ error: errorMessage });
+    }
+  };
+
+  static IsOnlineListView = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const user = req.user as any;
+      const user_info = await UsersModel.findById(user.id);
+
+      if (!user_info) {
+        return res.status(404).json({ error: "Пользователь не найден." });
+      }
+
+      const userFriendIds = user_info?.friends?.list.map((fr) =>
+        fr._id.toString(),
+      );
+
+      const players = await UsersModel.find({ _id: { $in: userFriendIds } });
+
+      const list = players
+        .filter((u) => u.isOnline)
+        .map((u) => {
+          return {
+            id: u?.id,
+            name: u?.name,
+            lvl: u?.lvl,
+            gameInfo: u?.gameInfo,
+            isOnline: u?.isOnline,
+          };
+        });
+
+      const renderData = {
+        list: list,
+        friendListLength: user_info.friends.list.length ?? 0,
+        requestsForMeListLength: user_info.friends.requestsForMe.length ?? 0,
+      };
+
+      // return res
+      //   .status(200)
+      //   .json({ success: "Данные отправлены.", renderData: renderData });
+      return PageRender_v2("auth", renderData)(req, res, next);
+    } catch (err) {
+      console.error("Ошибка:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Неизвестная ошибка";
+      return res.status(500).json({ error: errorMessage });
+    }
+  };
 }
 
 export default ViewController;

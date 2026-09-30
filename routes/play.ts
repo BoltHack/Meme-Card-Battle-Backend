@@ -75,6 +75,23 @@ play.get(
   ViewController.GameView,
 );
 
+play.get("/friends/list", authenticateJWT, ViewController.FriendListView);
+play.get(
+  "/friends/RequestsForMeList",
+  authenticateJWT,
+  ViewController.RequestsForMeListView,
+);
+play.get(
+  "/friends/RequestsFromMeList",
+  authenticateJWT,
+  ViewController.RequestsFromMeListView,
+);
+play.get(
+  "/friends/isOnlineList",
+  authenticateJWT,
+  ViewController.IsOnlineListView,
+);
+
 play.post(
   "/cards/get/:cards_category",
   authenticateJWT,
@@ -93,7 +110,19 @@ play.post("/case/:case_id/open", authenticateJWT, PostController.OpenCasePost);
 play.post(
   "/save-settings/profile",
   authenticateJWT,
-  PostController.SaveSettingsProfile,
+  PostController.SaveSettingsProfilePost,
+);
+
+play.post("/friend/sendRequest", authenticateJWT, PostController.FriendSendRequestPost);
+play.post("/friend/cancelRequest", authenticateJWT, PostController.FriendCalcenRequestPost);
+play.post(
+  "/friend/request/:requester_id/:action",
+  authenticateJWT,
+  PostController.RequestActionPost,
+);play.post(
+  "/friend/remove/:friend_id",
+  authenticateJWT,
+  PostController.RemoveFriendPost,
 );
 
 export default play;
