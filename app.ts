@@ -52,7 +52,8 @@ interface UserData {
 // }
 
 const clients: Record<string, string> = {};
-function delay(ms) {
+
+function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 async function gameFountTimer(socket: any, player_id: string) {
@@ -157,7 +158,7 @@ async function gameFountTimer(socket: any, player_id: string) {
         });
       } else {
         console.log(
-          `Критическая ситуация: сокет для игрока ${matched_user.id} не найден!`,
+          `Ошибка: сокет игрока ${matched_user.id} не найден.`,
         );
       }
 
@@ -191,7 +192,13 @@ io.on("connection", async (socket) => {
       if (!user_info) return;
 
       (socket as SocketData).playerId = player_id;
-      clients[player_id] = socket.id;
+      const connectedSocketId = socket.id;
+
+      if (clients[player_id] !== connectedSocketId) {
+        clients[player_id] = socket.id;
+      }
+
+      // clients[player_id] = socket.id;
 
       if (clients[player_id] === socket.id) {
         console.log(`${player_id} в сети.`);
@@ -346,6 +353,54 @@ io.on("connection", async (socket) => {
       GAME(socket);
     } else {
       console.log("Ошибка ввода.");
+    }
+  });
+
+  socket.on("invite_game_server", async (data: any) => {
+    const { type, action, friendID } = data;
+    try {
+      const player_id = (socket as SocketData).playerId;
+
+      if (!player_id) return;
+
+      const [user_info, friend_info] = await Promise.all([
+        UsersModel.findById(player_id),
+        UsersModel.findById(friendID),
+      ]);
+
+      if (!user_info || !friend_info) {
+        console.log("Пользователь не найден.");
+        return;
+      }
+
+      // clients[player_id.toString()] = socket.id;
+
+      const targetFriendId = friendID.toString();
+      const matched_socket_id = clients[targetFriendId];
+
+      if (!matched_socket_id) {
+        console.log("Нет активного сокета");
+        console.log("player_id", player_id);
+        console.log("targetFriendId", targetFriendId);
+        return;
+      }
+
+      io.to(matched_socket_id).emit("invite_game_client", {
+        type: type,
+        action: action,
+        inviterData: {
+          id: user_info.id,
+          name: user_info.name,
+          lvl: user_info.lvl,
+          avatar: user_info.image,
+        },
+      });
+
+      // delete clients[friendID];
+
+      console.log(`Запрос успешно отправлен от ${player_id} к ${friendID}`);
+    } catch (error) {
+      console.log("socket error", error);
     }
   });
 

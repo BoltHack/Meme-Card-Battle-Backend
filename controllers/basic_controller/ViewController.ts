@@ -216,11 +216,16 @@ class ViewController {
           .json({ error: "Пользователь не найден в базе данных" });
       }
 
-      return res.status(200).json({
-        id: user?.id || "",
-        name: user?.name || "",
-        role: user?.role || "",
-      });
+      const renderData = {
+        avatar: user_info.image
+      }
+
+      // return res.status(200).json({
+      //   id: user?.id || "",
+      //   name: user?.name || "",
+      //   role: user?.role || "",
+      // });
+      return PageRender_v2("auth", renderData)(req, res, next);
     } catch (err) {
       console.error("Ошибка:", err);
       const errorMessage =
@@ -711,8 +716,8 @@ class ViewController {
 
       const renderData = {
         list: list,
-        friendListLength: user_info.friends.list.length ?? 0,
-        requestsForMeListLength: user_info.friends.requestsForMe.length ?? 0,
+        friendListLength: user_info?.friends?.list.length ?? 0,
+        requestsForMeListLength: user_info?.friends?.requestsForMe.length ?? 0,
       };
 
       // return res

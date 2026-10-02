@@ -57,9 +57,10 @@ class AdminController_View {
         content: blogRead.content,
       };
 
-      res.status(200).json({
-        blog: blogData,
-      });
+      // return res.status(200).json({
+      //   blog: blogData,
+      // });
+      return PageRender_v2("auth", blogData)(req, res, next);
     } catch (err) {
       console.error("Ошибка:", err);
       return res.status(500).json({ error: "Внутренняя ошибка сервера" });

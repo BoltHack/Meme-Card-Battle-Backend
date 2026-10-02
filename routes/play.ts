@@ -104,11 +104,7 @@ play.post(
   PostController.GetCaseContentPost,
 );
 
-play.post(
-  "/case/:case_id/buy",
-  authenticateJWT,
-  PostController.BuyCasePost,
-);
+play.post("/case/:case_id/buy", authenticateJWT, PostController.BuyCasePost);
 play.post("/case/:case_id/open", authenticateJWT, PostController.OpenCasePost);
 
 play.post(
@@ -117,13 +113,22 @@ play.post(
   PostController.SaveSettingsProfilePost,
 );
 
-play.post("/friend/sendRequest", authenticateJWT, PostController.FriendSendRequestPost);
-play.post("/friend/cancelRequest", authenticateJWT, PostController.FriendCalcenRequestPost);
+play.post(
+  "/friend/sendRequest",
+  authenticateJWT,
+  PostController.FriendSendRequestPost,
+);
+play.post(
+  "/friend/cancelRequest",
+  authenticateJWT,
+  PostController.FriendCalcenRequestPost,
+);
 play.post(
   "/friend/request/:requester_id/:action",
   authenticateJWT,
   PostController.RequestActionPost,
-);play.post(
+);
+play.post(
   "/friend/remove/:friend_id",
   authenticateJWT,
   PostController.RemoveFriendPost,
