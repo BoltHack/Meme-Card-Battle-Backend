@@ -109,14 +109,31 @@ export const GAME = (socket: Socket) => {
 
       const player_cards = await CardsModel.find({ _id: { $in: ids } });
 
-      const formattedCardsArray = player_cards.flatMap((card) => {
+      const cardsLegendary = player_cards.filter(
+        (card) => card?.card_lvl_info?.lvl_name === "LEGENDARY",
+      );
+      const cardsEpic = player_cards.filter(
+        (card) => card?.card_lvl_info?.lvl_name === "EPIC",
+      );
+      const cardsRare = player_cards.filter(
+        (card) => card?.card_lvl_info?.lvl_name === "RARE",
+      );
+      const cardsDefault = player_cards.filter(
+        (card) => card?.card_lvl_info?.lvl_name === "DEFAULT",
+      );
+
+      const sortedCards = [
+        ...cardsLegendary,
+        ...cardsEpic,
+        ...cardsRare,
+        ...cardsDefault,
+      ];
+
+      const formattedCardsArray = sortedCards.flatMap((card) => {
         const isRandom = arr.find(
           (c) => c.card_id.toString() === card._id.toString(),
         );
         const count = isRandom.quantity || 1;
-
-        // console.log('isRandom', isRandom);
-        // console.log('card', card);
 
         return Array.from({ length: count }, (_, index) => ({
           menu_id: new mongoose.Types.ObjectId(),
@@ -132,28 +149,6 @@ export const GAME = (socket: Socket) => {
           power_slot: card.power_slot || 5,
         }));
       });
-
-      // const formattedCardsArray = player_cards.map(cards => {
-      //     const cardIdStr = cards._id.toString();
-      //     const randomId = new mongoose.Types.ObjectId();
-      //
-      //     const isRandom = arr.find(c => c.card_id.toString() === cardIdStr.toString());
-      //     // const isQuantity = arr.find(c => c.card_id.toString() === cardIdStr.toString() ? c.quantity : null);
-      //     // console.log('isRandom', isRandom.quantity);
-      //
-      //     return {
-      //         menu_id: randomId,
-      //         quantity: isRandom.quantity,
-      //         id: cards._id,
-      //         name: cards.card_name,
-      //         description: cards.card_description || "",
-      //         avatar: cards.card_avatar,
-      //         lvl: cards.card_lvl_info?.lvl_number || 1,
-      //         rarity: cards.card_lvl_info?.lvl_name || "Default",
-      //         damage: cards.card_stats?.card_damage || 0,
-      //         protection: cards.card_stats?.card_protection || 0
-      //     }
-      // });
 
       socket.emit("get_player_cards", {
         cards_data: formattedCardsArray,
