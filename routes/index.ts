@@ -34,6 +34,11 @@ router.get(
   CheckMaintenanceMode,
   ViewController.ReadPage_docs("privacy-policy"),
 );
+router.get(
+  "/cookie-policy",
+  CheckMaintenanceMode,
+  ViewController.ReadPage_docs("cookie-policy"),
+);
 
 router.get("/blog", CheckMaintenanceMode, ViewController.BlogView);
 router.get(
