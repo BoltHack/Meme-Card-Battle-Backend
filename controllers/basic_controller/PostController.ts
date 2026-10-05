@@ -110,7 +110,27 @@ class PostController {
 
       const get_cards = await CardsModel.find(cardQuery);
 
-      const renderData = (get_cards as any)?.map((cards) => {
+      const cardsLegendary = get_cards.filter(
+        (card) => card?.card_lvl_info?.lvl_name === "LEGENDARY",
+      );
+      const cardsEpic = get_cards.filter(
+        (card) => card?.card_lvl_info?.lvl_name === "EPIC",
+      );
+      const cardsRare = get_cards.filter(
+        (card) => card?.card_lvl_info?.lvl_name === "RARE",
+      );
+      const cardsDefault = get_cards.filter(
+        (card) => card?.card_lvl_info?.lvl_name === "DEFAULT",
+      );
+
+      const sortedCards = [
+        ...cardsLegendary,
+        ...cardsEpic,
+        ...cardsRare,
+        ...cardsDefault,
+      ];
+
+      const renderData = (sortedCards as any)?.map((cards) => {
         const cardIdStr = cards._id.toString();
 
         const matched_quantity = user_cards.find(

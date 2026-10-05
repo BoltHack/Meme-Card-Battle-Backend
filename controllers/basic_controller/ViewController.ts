@@ -217,14 +217,11 @@ class ViewController {
       }
 
       const renderData = {
-        avatar: user_info.image
-      }
-
-      // return res.status(200).json({
-      //   id: user?.id || "",
-      //   name: user?.name || "",
-      //   role: user?.role || "",
-      // });
+        id: user?.id || "",
+        name: user?.name || "",
+        role: user?.role || "",
+      };
+      
       return PageRender_v2("auth", renderData)(req, res, next);
     } catch (err) {
       console.error("Ошибка:", err);
