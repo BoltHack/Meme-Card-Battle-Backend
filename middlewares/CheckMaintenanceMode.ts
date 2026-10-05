@@ -34,8 +34,6 @@ const CheckMaintenanceMode = async (
   try {
     if (req.url === "/favicon.ico" || req.method === "OPTIONS") return next();
 
-    console.log("proverka");
-
     const App = await AppModel.getSettings();
 
     if (!App?.maintenanceMode) {
