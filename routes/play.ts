@@ -67,6 +67,12 @@ play.get(
   authenticateJWT,
   PageRender("auth"),
 );
+play.get(
+  "/settings/sounds",
+  CheckMaintenanceMode,
+  authenticateJWT,
+  PageRender("auth"),
+);
 
 play.get(
   "/game/:game_type/:game_key",
