@@ -412,8 +412,7 @@ export const GAME = (socket: Socket) => {
         if (!ubi.user_isReady && !game_info.game_started) {
           console.log("Игрок вышел до начала игры.");
           if (game_info.game_online.users.length === 0) {
-            
-          } 
+          }
           return;
         }
         console.log("Игрок вышел во время игры");
@@ -518,6 +517,9 @@ export const GAME = (socket: Socket) => {
               card_id: battle_card,
               user_base_card_id: menu_id,
             },
+          },
+          $inc: {
+            "users_battle_info.$.user_cards.cards_power": battle_card.power_slot,
           },
         },
         { new: true },
@@ -673,6 +675,10 @@ export const GAME = (socket: Socket) => {
               user_base_card_id: user_card_entry.user_base_card_id,
             },
           },
+          $inc: {
+            "users_battle_info.$.user_cards.cards_power":
+              -battle_card.power_slot,
+          },
         },
         { new: true },
       );
@@ -744,7 +750,21 @@ export const GAME = (socket: Socket) => {
 
       game_find_player.user_cards.select_card = card_to_change;
       game_find_player.user_cards.battle_cards.splice(cardIndex, 1);
-      // isCardSelected = card_to_change.toString();
+
+      // await GamesModel.findOneAndUpdate(
+      //   {
+      //     _id: game_info.id,
+      //     "users_battle_info._id": player_id,
+      //   },
+      //   {
+      //     $addToSet: {
+      //       "users_battle_info.$.user_cards.select_card": card_to_change,
+      //     },
+      //     $pull: {
+      //       "users_battle_info.$.user_cards.battle_cards": card_to_change,
+      //     },
+      //   },
+      // );
 
       await game_info.save();
 

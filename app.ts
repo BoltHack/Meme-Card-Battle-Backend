@@ -101,7 +101,6 @@ async function createGameMatch(
   return newGame;
 }
 
-
 async function gameFountTimer(socket: any, player_id: string) {
   const user_info = await UsersModel.findByIdAndUpdate(
     player_id,
@@ -425,6 +424,13 @@ io.on("connection", async (socket) => {
       if (!user_info || !friend_info) {
         console.log("Пользователь не найден.");
         return;
+      }
+
+      if (!friend_info.isOnline) {
+        socket.emit("invite_game_client", {
+          type: "alert",
+          message: `${friend_info.name} не в сети.`,
+        });
       }
 
       const targetFriendId = friendID.toString();

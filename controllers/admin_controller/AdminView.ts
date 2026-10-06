@@ -24,6 +24,57 @@ interface CustomRequest extends Request {
   basicData: BasicData;
 }
 class AdminController_View {
+  static BlogListView = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { article_type } = req.params;
+      const pageQuery = parseInt(req.query.page as string, 7);
+      const page = isNaN(pageQuery) || pageQuery < 1 ? 1 : pageQuery;
+
+      const limit = 7;
+      const skip = (page - 1) * limit;
+
+      const [allBlogs, totalBlogs] = await Promise.all([
+        BlogsModel.find(
+          article_type === "blog"
+            ? { category: { $ne: "news" } }
+            : { category: { $eq: "news" } },
+        )
+          .sort({ date: -1 })
+          .skip(skip)
+          .limit(limit),
+        BlogsModel.countDocuments(
+          article_type === "blog"
+            ? { category: { $ne: "news" } }
+            : { category: { $eq: "news" } },
+        ),
+      ]);
+
+      const blogsData = allBlogs.map((blog) => ({
+        author: blog.author?.name,
+        title: blog.main_content?.title,
+        description: blog.main_content?.description,
+        cover: blog.main_content?.cover,
+        category: blog.category,
+        date: blog.date,
+        id: blog._id,
+      }));
+
+      const renderData = {
+        blog: blogsData,
+        currentPage: page,
+        totalPages: Math.max(1, Math.ceil(totalBlogs / limit)),
+      };
+      return PageRender_v2("no_auth", renderData)(req, res, next);
+    } catch (err) {
+      console.error("Ошибка:", err);
+      return res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    }
+  };
+
   static EditBlogView = async (
     req: CustomRequest,
     res: Response,

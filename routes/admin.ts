@@ -42,6 +42,12 @@ admin.get(
 );
 
 admin.get(
+  "/article/:article_type/list",
+  authenticateJWT,
+  verifyPermissions("Admin"),
+  AdminController_View.BlogListView,
+);
+admin.get(
   "/blog/create",
   authenticateJWT,
   verifyPermissions("Admin"),
