@@ -311,8 +311,10 @@ class AdminController_View {
         };
       });
 
-      const renderData = formattedCardsArray;
-
+      const renderData = {
+        case_name: case_data.name,
+        cards: formattedCardsArray,
+      };
       return PageRender_v2("auth", renderData)(req, res, next);
     } catch (err) {
       console.error("Ошибка:", err);
