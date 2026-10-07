@@ -145,8 +145,11 @@ class ViewController {
         });
 
       const blogData = blog_info
-        .slice(-3)
-        .filter(blog => blog.category === "news").map((blog) => ({
+        // .slice(-3)
+        .filter((blog) => blog.category === "news")
+        .sort((a, b) => new Date(b.date) - new Date(a.date))
+        .slice(0, 3)
+        .map((blog) => ({
           author: blog.author?.name,
           title: blog.main_content?.title,
           description: blog.main_content?.description,
@@ -154,8 +157,8 @@ class ViewController {
           category: blog.category,
           date: blog.date,
           id: blog._id,
-        }))
-        .reverse();
+        }));
+      // .reverse();
 
       const renderData = {
         linksData: linksData,
@@ -398,7 +401,7 @@ class ViewController {
         $or: [{ isVisibility: true }, { isVisibility: { $exists: false } }],
         "main_content.title": { $exists: true, $ne: "" },
         "main_content.description": { $exists: true, $ne: "" },
-        "category": { $ne: "news" }
+        category: { $ne: "news" },
       };
 
       const [allBlogs, totalBlogs] = await Promise.all([
@@ -409,16 +412,15 @@ class ViewController {
         BlogsModel.countDocuments(filteredQuery),
       ]);
 
-      const blogsData = allBlogs
-        .map((blog) => ({
-          author: blog.author?.name,
-          title: blog.main_content?.title,
-          description: blog.main_content?.description,
-          cover: blog.main_content?.cover,
-          category: blog.category,
-          date: blog.date,
-          id: blog._id,
-        }));
+      const blogsData = allBlogs.map((blog) => ({
+        author: blog.author?.name,
+        title: blog.main_content?.title,
+        description: blog.main_content?.description,
+        cover: blog.main_content?.cover,
+        category: blog.category,
+        date: blog.date,
+        id: blog._id,
+      }));
 
       const renderData = {
         blog: blogsData,
