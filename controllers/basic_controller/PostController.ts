@@ -511,12 +511,12 @@ class PostController {
       ) {
         return res
           .status(403)
-          .json({ error: "Данные пользователь уже в вашем списке друзей." });
+          .json({ error: `${user_info.name} уже в вашем списке друзей.` });
       }
 
       if (
-        requester_info?.friends?.requestsForMe.find(
-          (rfm) => rfm._id.toString() === requesterID,
+        requester_info?.friends?.requestsFromMe.find(
+          (rfm) => rfm._id.toString() === user_info.id.toString(),
         )
       ) {
         return res
@@ -673,7 +673,30 @@ class PostController {
             (fr) => fr._id?.toString() === requester_id,
           )
         )
-          return res.status(404).json({ error: "Данный пользователь не отправлял вам никаких запросов." });
+          return res.status(404).json({
+            error: `${requester_info.name} не отправлял вам никаких запросов.`,
+          });
+
+        if (
+          requester_info.friends.list.find(
+            (fr) => fr._id.toString() === user_info.id.toString(),
+          )
+        ) {
+          await UsersModel.findOneAndUpdate(
+            { _id: user.id },
+            {
+              $pull: {
+                "friends.requestsForMe": {
+                  _id: requester_id,
+                },
+              },
+            },
+            { new: true },
+          );
+          return res.status(404).json({
+            error: `${requester_info.name} уже в вашем списке друзей.`,
+          });
+        }
 
         await UsersModel.findOneAndUpdate(
           { _id: requester_id },
