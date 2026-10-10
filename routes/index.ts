@@ -10,6 +10,8 @@ import { PageRender } from "../middlewares/PageRender";
 
 const router = express.Router();
 
+router.get("/getData", CheckMaintenanceMode, ViewController.GetDataView);
+
 router.get("/", CheckMaintenanceMode, ViewController.MainView);
 
 router.get(

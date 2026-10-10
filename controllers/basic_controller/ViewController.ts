@@ -122,6 +122,37 @@ class ViewController {
     };
   };
 
+  static GetDataView = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const config = await App_GlobalConfigModel.getSettings();
+
+      const linksData = config.links
+        .map((links: any) => {
+          return {
+            id: links._id.toString(),
+            name: links.name,
+            link: links.link,
+            icon: links.icon,
+            priority: Number(links.priority),
+            // main_priority: Boolean(links.main_priority),
+          };
+        });
+
+      const renderData = linksData;
+
+      return PageRender_v2("no_auth", renderData)(req, res, next);
+    } catch (err) {
+      console.error("Ошибка:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Неизвестная ошибка";
+      return res.status(500).json({ error: errorMessage });
+    }
+  };
+
   static MainView = async (
     req: CustomRequest,
     res: Response,
