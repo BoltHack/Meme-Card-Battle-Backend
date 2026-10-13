@@ -1,5 +1,7 @@
 import { Schema, model, InferSchemaType } from "mongoose";
 
+const maxArrayLimit = (val) => val.length <= 100;
+
 const UsersSchema = new Schema({
   name: { type: String, required: true },
   requestName: { type: String, required: true, unique: true },
@@ -11,7 +13,12 @@ const UsersSchema = new Schema({
 
   coins: { type: Number, min: 0, default: 0 },
   money: { type: Number, min: 0, default: 0 },
+
+  wins: { type: Number, default: 0 },
+
   lvl: { type: Number, min: 0, max: 100, default: 1 },
+  lvlXP: { type: Number, default: 0 },
+
   keys: [
     {
       _id: { type: Schema.Types.ObjectId },
@@ -32,22 +39,37 @@ const UsersSchema = new Schema({
     },
   },
 
+  // friends: {
+  //   list: [
+  //     {
+  //       _id: { type: Schema.Types.ObjectId, ref: "user" },
+  //     },
+  //   ],
+  //   requestsForMe: [
+  //     {
+  //       _id: { type: Schema.Types.ObjectId, ref: "user" },
+  //     },
+  //   ],
+  //   requestsFromMe: [
+  //     {
+  //       _id: { type: Schema.Types.ObjectId, ref: "user" },
+  //     },
+  //   ],
+  // },
+
   friends: {
-    list: [
-      {
-        _id: { type: Schema.Types.ObjectId, ref: "user" },
-      },
-    ],
-    requestsForMe: [
-      {
-        _id: { type: Schema.Types.ObjectId, ref: "user" },
-      },
-    ],
-    requestsFromMe: [
-      {
-        _id: { type: Schema.Types.ObjectId, ref: "user" },
-      },
-    ],
+    list: {
+      type: [{ _id: { type: Schema.Types.ObjectId, ref: "user" } }],
+      validate: [maxArrayLimit, "{PATH} exceeds the limit of 100 items"],
+    },
+    requestsForMe: {
+      type: [{ _id: { type: Schema.Types.ObjectId, ref: "user" } }],
+      validate: [maxArrayLimit, "{PATH} exceeds the limit of 100 items"],
+    },
+    requestsFromMe: {
+      type: [{ _id: { type: Schema.Types.ObjectId, ref: "user" } }],
+      validate: [maxArrayLimit, "{PATH} exceeds the limit of 100 items"],
+    },
   },
 
   refreshTokenHash: { type: String, default: null },

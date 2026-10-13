@@ -551,6 +551,7 @@ app.use(
 );
 
 app.use(cookiesData);
+
 app.use("/api", indexRouter);
 app.use("/play", playRouter);
 app.use("/auth", authRouter);

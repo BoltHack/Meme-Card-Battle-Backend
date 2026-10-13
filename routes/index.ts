@@ -50,6 +50,15 @@ router.get(
 );
 router.get("/blog/:blog_id", CheckMaintenanceMode, ViewController.BlogReadView);
 
+router.get("/ratings", CheckMaintenanceMode, PageRender("no_auth"));
+router.get("/ratings/wins", CheckMaintenanceMode, ViewController.RatingsView_wins);
+router.get("/ratings/balance", CheckMaintenanceMode, ViewController.RatingsView_balance);
+router.get(
+  "/ratings/xp",
+  CheckMaintenanceMode,
+  ViewController.RatingsView_xp,
+);
+
 router.get("/bot-settings", CheckMaintenanceMode, PageRender("auth"));
 router.get("/game-settings", CheckMaintenanceMode, PageRender("auth"));
 

@@ -130,17 +130,16 @@ class ViewController {
     try {
       const config = await App_GlobalConfigModel.getSettings();
 
-      const linksData = config.links
-        .map((links: any) => {
-          return {
-            id: links._id.toString(),
-            name: links.name,
-            link: links.link,
-            icon: links.icon,
-            priority: Number(links.priority),
-            // main_priority: Boolean(links.main_priority),
-          };
-        });
+      const linksData = config.links.map((links: any) => {
+        return {
+          id: links._id.toString(),
+          name: links.name,
+          link: links.link,
+          icon: links.icon,
+          priority: Number(links.priority),
+          // main_priority: Boolean(links.main_priority),
+        };
+      });
 
       const renderData = linksData;
 
@@ -224,6 +223,7 @@ class ViewController {
         money: user_info?.money,
         coins: user_info?.coins,
         lvl: user_info?.lvl,
+        xp: user_info?.lvlXP,
       };
 
       return PageRender_v2("auth", renderData)(req, res, next);
@@ -566,6 +566,130 @@ class ViewController {
     } catch (err) {
       console.error("Ошибка:", err);
       return res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    }
+  };
+
+  static RatingsView_wins = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const users_info = await UsersModel.find({ wins: { $gt: 0 } })
+        .sort({ wins: -1 })
+        .limit(100);
+
+      const renderData = users_info
+        .sort((a, b) => b.wins - a.wins)
+        .map((user) => {
+          return {
+            lvl: user.lvl,
+            name: user.name,
+            value: user.wins,
+            units: "побед",
+          };
+        });
+
+      return res.status(200).json({ renderData: renderData });
+    } catch (err) {
+      console.error("Ошибка:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Неизвестная ошибка";
+      return res.status(500).json({ error: errorMessage });
+    }
+  };
+
+  // let cachedRatings: any = null;
+  // let lastFetchTime = 0;
+  // const CACHE_DURATION = 10 * 60 * 1000;
+
+  // static async RatingsView_wins(req: Request, res: Response, next: NextFunction) {
+  //   try {
+  //     const currentTime = Date.now();
+
+  //     if (!cachedRatings || (currentTime - lastFetchTime) > CACHE_DURATION) {
+  //       const users_info = await UsersModel.find({ wins: { $gt: 0 } })
+  //         .sort({ wins: -1 })
+  //         .limit(4);
+
+  //       cachedRatings = users_info
+  //         .sort((a, b) => b.wins - a.wins)
+  //         .map(user => ({
+  //           lvl: user.lvl,
+  //           name: user.name,
+  //           value: user.wins,
+  //           units: "побед"
+  //         }));
+
+  //       lastFetchTime = currentTime;
+  //     }
+
+  //     return res.status(200).json({ renderData: cachedRatings });
+
+  //   } catch (err) {
+  //     console.error("Ошибка:", err);
+  //     const errorMessage = err instanceof Error ? err.message : "Неизвестная ошибка";
+  //     return res.status(500).json({ error: errorMessage });
+  //   }
+  // }
+
+  static RatingsView_balance = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const users_info = await UsersModel.find({ money: { $gt: 0 } })
+        .sort({ money: -1 })
+        .limit(100);
+
+      const renderData = users_info
+        .sort((a, b) => b.money - a.money)
+        .map((user) => {
+          return {
+            lvl: user.lvl,
+            name: user.name,
+            value: user.money,
+            units: "валюты",
+          };
+        });
+
+      return res.status(200).json({ renderData: renderData });
+    } catch (err) {
+      console.error("Ошибка:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Неизвестная ошибка";
+      return res.status(500).json({ error: errorMessage });
+    }
+  };
+
+  static RatingsView_xp = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const users_info = await UsersModel.find({ lvlXP: { $gt: 0 } })
+        .sort({ lvlXP: -1 })
+        .limit(100);
+
+      const renderData = users_info
+        .sort((a, b) => b.lvlXP - a.lvlXP)
+        .map((user) => {
+          return {
+            lvl: user.lvl,
+            name: user.name,
+            value: user.lvlXP,
+            units: "Опыта",
+          };
+        });
+
+      return res.status(200).json({ renderData: renderData });
+    } catch (err) {
+      console.error("Ошибка:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Неизвестная ошибка";
+      return res.status(500).json({ error: errorMessage });
     }
   };
 

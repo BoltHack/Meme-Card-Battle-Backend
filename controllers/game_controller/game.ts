@@ -196,6 +196,58 @@ export const GAME = (socket: Socket) => {
     }
   }
 
+  async function get_player_prize(userID: string, gameID: string) {
+    const [user_info, game_info] = await Promise.all([
+      await UsersModel.findById(userID),
+      await GamesModel.findById(gameID),
+    ]);
+
+    if (!user_info || !game_info) return null;
+
+    const battle_info = game_info.users_battle_info.find(
+      (ubi) => ubi._id.toString() === userID.toString(),
+    );
+
+    const userHealth = battle_info.user_health;
+
+    let currentLVL = Number(user_info.lvl);
+    let currentXP = user_info.lvlXP + currentLVL * userHealth;
+    // let currentXP = currentLVL * userHealth;
+
+    let xpNeeded = Math.round(Math.pow(currentLVL, 1.5) * 2500);
+    // let xpNeeded = currentLVL * 2500;
+    let leveledUp = false;
+
+    while (currentXP >= xpNeeded) {
+      // currentXP -= xpNeeded;
+      currentLVL += 1;
+      xpNeeded = Math.round(Math.pow(currentLVL, 1.5) * 2500);
+      leveledUp = true;
+    }
+
+    console.log("currentXP", currentXP);
+    console.log("lvlXP", user_info.lvlXP);
+    console.log("userHealth", userHealth);
+
+    const updatedUser = await UsersModel.findOneAndUpdate(
+      { _id: userID },
+      {
+        $set: {
+          lvl: currentLVL,
+          lvlXP: currentXP,
+        },
+      },
+      { new: true },
+    );
+
+    if (leveledUp) {
+      console.log(`New lvl: ${currentLVL}!`);
+    }
+
+    // return updatedUser ? updatedUser.lvlXP : null;
+    return updatedUser ? currentXP - user_info.lvlXP : null;
+  }
+
   async function game_selected_cards_result_func(gameId: string) {
     try {
       const game_info = (await GamesModel.findById(gameId)) as GameData;
@@ -231,7 +283,6 @@ export const GAME = (socket: Socket) => {
       console.log(`Игрок 1 нанес чистый урон: ${p1_damage}`);
       console.log(`Игрок 2 нанес чистый урон: ${p2_damage}`);
 
-      // let result = {};
       let result = {
         status: "draw",
         winnerId: null,
@@ -240,8 +291,19 @@ export const GAME = (socket: Socket) => {
       };
 
       if (p1_damage > p2_damage) {
-        game_info.users_battle_info[0].user_ult += Number(p1_damage);
+        game_info.users_battle_info[0].user_ult += Number(p1_damage / 2);
         game_info.users_battle_info[1].user_health -= Number(p1_damage);
+
+        // await GamesModel.findOneAndUpdate(
+        //   { _id: gameId },
+        //   {
+        //     $inc: {
+        //       "users_battle_info.0.user_ult": + Number(p1_damage / 2),
+        //       "users_battle_info.1.user_health": - Number(p1_damage),
+        //     },
+        //   },
+        //   { new: true },
+        // );
 
         if (game_info.users_battle_info[1].user_health <= 0) {
           await set_winner_func(player1.userId);
@@ -261,7 +323,7 @@ export const GAME = (socket: Socket) => {
         }
       } else if (p2_damage > p1_damage) {
         game_info.users_battle_info[1].user_ult += Number(p2_damage / 2);
-        game_info.users_battle_info[0].user_health -= Number(p2_damage / 2);
+        game_info.users_battle_info[0].user_health -= Number(p2_damage);
 
         if (game_info.users_battle_info[0].user_health <= 0) {
           await set_winner_func(player2.userId);
@@ -302,6 +364,10 @@ export const GAME = (socket: Socket) => {
         gameData: {
           winnerId: result.winnerId ? result.winnerId.toString() : null,
           result: result,
+          exp:
+            result.status === "win"
+              ? await get_player_prize(result?.winnerId, gameId)
+              : 0,
         },
       });
     } catch (error) {
@@ -412,6 +478,7 @@ export const GAME = (socket: Socket) => {
         if (!ubi.user_isReady && !game_info.game_started) {
           console.log("Игрок вышел до начала игры.");
           if (game_info.game_online.users.length === 0) {
+            await GamesModel.findByIdAndDelete(game_info.id);
           }
           return;
         }
@@ -519,7 +586,8 @@ export const GAME = (socket: Socket) => {
             },
           },
           $inc: {
-            "users_battle_info.$.user_cards.cards_power": battle_card.power_slot,
+            "users_battle_info.$.user_cards.cards_power":
+              battle_card.power_slot,
           },
         },
         { new: true },
