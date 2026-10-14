@@ -8,23 +8,24 @@ import http from "http";
 import fileUpload from "express-fileupload";
 import { Server, Socket } from "socket.io";
 
-import indexRouter from "./routes/index.ts";
-import playRouter from "./routes/play.ts";
+import indexRouter from "./routes/index";
+import playRouter from "./routes/play";
 import authRouter from "./routes/auth";
 import adminRouter from "./routes/admin";
 
 import cookiesData from "./app_data/cookiesData";
 
 import { BOT_mode } from "./controllers/bots_controller/BOT_easyMode";
-import { start } from "./services/db";
+import { start } from "./config/db";
 import { GAME } from "./controllers/game_controller/game";
-// import fileUpload from "express-fileupload";
+
+import { initLogger } from "./config/ConfigLogger";
 
 import UsersModel from "./models/UsersModel";
 import GamesModel from "./models/GamesModel";
 import mongoose from "mongoose";
 
-const serverPort = process.env.PORT;
+const serverPort = process.env.BACKEND_PORT;
 
 const app = express();
 const server = http.createServer(app);
@@ -562,10 +563,12 @@ async function launchApp() {
     await start();
 
     server.listen(serverPort, () => {
-      console.log(`Сервер запущен на порту ${serverPort}`);
+      // console.log(`Сервер запущен на порту ${serverPort}`);
+      initLogger("info", `Сервер запущен на порту ${serverPort}`);
     });
   } catch (err) {
     console.log("Не удалось запустить сервер", err);
+    initLogger("error", `Не удалось запустить сервер ${err}`);
     process.exit(1);
   }
 }

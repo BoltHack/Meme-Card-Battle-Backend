@@ -104,6 +104,13 @@ admin.get(
   AdminController_View.EditLinkView,
 );
 
+admin.get(
+  "/logs",
+  authenticateJWT,
+  verifyPermissions("Admin"),
+  AdminController_View.LogsView,
+);
+
 
 admin.post(
   "/card/create",

@@ -384,6 +384,37 @@ class AdminController_View {
       return res.status(500).json({ error: "Внутренняя ошибка сервера" });
     }
   };
+
+  static LogsView = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const date = new Date();
+
+      const getDay = date.getDate();
+      const getMonth = date.getMonth() + 1;
+      const getYear = date.getFullYear();
+
+      const filePath = path.join(
+        process.cwd(),
+        "logs",
+        `combined-${getYear}-${getMonth}-${getDay}.log`,
+      );
+
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ error: "Страница не найдена" });
+      }
+
+      const content = await fs.promises.readFile(filePath, "utf8");
+
+      return PageRender_v2("auth", content)(req, res, next);
+    } catch (err) {
+      console.error("Ошибка:", err);
+      return res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    }
+  };
 }
 
 export default AdminController_View;

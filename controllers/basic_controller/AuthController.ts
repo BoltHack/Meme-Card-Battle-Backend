@@ -2,13 +2,15 @@ import { Request, Response, NextFunction } from "express";
 import UsersModel from "../../models/UsersModel";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
-const jwt = require("jsonwebtoken");
+import jwt from "jsonwebtoken";
+
+import { initLogger } from "../../config/ConfigLogger";
 
 require("dotenv").config();
 
 const { ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET } = process.env;
 
-function parseMaxAge(duration): number {
+function parseMaxAge(duration: number) {
   const unit = duration.slice(-1);
   const amount = parseInt(duration.slice(0, -1), 10);
 
@@ -26,17 +28,17 @@ function parseMaxAge(duration): number {
   }
 }
 
-interface AccessPayload {
-  id: string;
-  name: string;
-  role: string;
-  tokenVersion: number;
-}
+// interface AccessPayload {
+//   id: string;
+//   name: string;
+//   role: string;
+//   tokenVersion: number;
+// }
 
-interface RefreshPayload {
-  id: string;
-  tokenVersion: number;
-}
+// interface RefreshPayload {
+//   id: string;
+//   tokenVersion: number;
+// }
 
 interface UserData {
   id: string;
@@ -116,6 +118,8 @@ class AuthController {
         maxAge: parseMaxAge("10d"),
       });
 
+      initLogger("info", `Пользователь ${newUser.name} создал аккаунт`);
+      
       return res.status(200).json({
         success: "Успешная регистрация!",
         referer: "/play",
@@ -227,6 +231,8 @@ class AuthController {
         maxAge: parseMaxAge("10d"),
       });
 
+      initLogger("info", `Пользователь ${user.name} вошел в аккаунт`);
+
       return res
         .status(200)
         .json({ success: "Успешная авторизация!", referer: "/play" });
@@ -243,10 +249,12 @@ class AuthController {
     next: NextFunction,
   ) => {
     try {
+      const user = req.user;
+      
       res.clearCookie("access_token");
       res.clearCookie("refresh_token");
 
-      console.log("Выход...");
+      initLogger("info", `Пользователь ${user.name} вышел из аккаунта`);
       return res.status(200).json({ success: "Вы вышли из системы" });
     } catch (err) {
       console.error("Ошибка:", err);

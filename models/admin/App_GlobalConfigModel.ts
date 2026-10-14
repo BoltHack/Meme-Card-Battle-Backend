@@ -15,7 +15,7 @@ const App_GlobalConfigSchema = new Schema(
       type: Boolean,
       default: false,
     },
-    require2FA: {
+    configLogger: {
       type: Boolean,
       default: false,
     },
