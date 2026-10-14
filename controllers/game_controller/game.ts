@@ -225,16 +225,15 @@ export const GAME = (socket: Socket) => {
       leveledUp = true;
     }
 
-    console.log("currentXP", currentXP);
-    console.log("lvlXP", user_info.lvlXP);
-    console.log("userHealth", userHealth);
-
     const updatedUser = await UsersModel.findOneAndUpdate(
       { _id: userID },
       {
         $set: {
           lvl: currentLVL,
           lvlXP: currentXP,
+        },
+        $inc: {
+          wins: 1,
         },
       },
       { new: true },

@@ -586,7 +586,7 @@ class ViewController {
             lvl: user.lvl,
             name: user.name,
             value: user.wins,
-            units: "побед",
+            // units: "побед",
           };
         });
 
@@ -650,7 +650,7 @@ class ViewController {
             lvl: user.lvl,
             name: user.name,
             value: user.money,
-            units: "валюты",
+            // units: "валюты",
           };
         });
 
@@ -680,7 +680,7 @@ class ViewController {
             lvl: user.lvl,
             name: user.name,
             value: user.lvlXP,
-            units: "Опыта",
+            // units: "Опыта",
           };
         });
 
