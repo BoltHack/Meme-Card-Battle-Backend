@@ -205,6 +205,9 @@ export const GAME = (socket: Socket) => {
 
       if (!user_info || !game_info) return null;
 
+      game_info.game_started = false;
+      await game_info.save();
+
       const battle_info = game_info.users_battle_info.find(
         (ubi) => ubi._id.toString() === userID.toString(),
       );
@@ -412,7 +415,6 @@ export const GAME = (socket: Socket) => {
   }
 
   async function start_cooldown_func(
-    socket: any,
     gameId: string,
     game_key: string,
     startTime: number,
@@ -478,7 +480,10 @@ export const GAME = (socket: Socket) => {
       for (const ubi of game_info.users_battle_info) {
         const currentPlayerId = ubi._id.toString();
 
-        if (!ubi.user_isReady && !game_info.game_started) {
+        if (
+          (ubi.user_isReady && !game_info.game_started) ||
+          (!ubi.user_isReady && !game_info.game_started)
+        ) {
           console.log("Игрок вышел до начала игры.");
           if (game_info.game_online.users.length === 0) {
             await GamesModel.findByIdAndDelete(game_info.id);
@@ -503,12 +508,88 @@ export const GAME = (socket: Socket) => {
           },
         });
 
+        if (game_info.game_online.users.length === 0) {
+          await GamesModel.findByIdAndDelete(game_info.id);
+        }
+
         return;
       }
     } catch (error) {
       console.log("error", error);
     }
   }
+
+  socket.on("check_user_ready_state_server", async (data) => {
+    const { player_id, game_key } = data;
+    try {
+      const [game_info, user_info] = await Promise.all([
+        GamesModel.findOne({ game_key: game_key }),
+        UsersModel.findById(player_id),
+      ]);
+
+      if (!game_info) {
+        socket.emit("error_handler", "Игра не найдена.");
+        return;
+      }
+
+      if (!user_info) {
+        socket.emit("error_handler", "Пользователь не найден.");
+        return;
+      }
+
+      const playerIndex = game_info.users_battle_info.findIndex(
+        (ubi) => ubi._id.toString() === player_id,
+      );
+
+      if (playerIndex === -1) {
+        socket.emit("error_handler", "index пользователя не найден.");
+        return;
+      }
+
+      const user_cards_cound =
+        game_info.users_battle_info[playerIndex].user_cards.battle_cards;
+
+      if (user_cards_cound.length < 8) {
+        socket.emit(
+          "error_handler",
+          "У вас неполная колода, чтобы начать игру",
+        );
+        return;
+      }
+
+      const updatedGame = await GamesModel.findOneAndUpdate(
+        {
+          _id: game_info.id,
+          "users_battle_info._id": player_id,
+        },
+        {
+          $set: {
+            "users_battle_info.$.user_isReady": true,
+          },
+        },
+        { new: true },
+      );
+
+      const users_ready = updatedGame.users_battle_info.map(
+        (ubi) => ubi.user_isReady,
+      );
+
+      const all_ready = users_ready.every((ready) => ready === true);
+
+      const gameRoom = `game_room:${game_info._id.toString()}`;
+
+      if (all_ready) {
+        console.log("Игроки готовы к бою.", users_ready);
+        game_info.game_started = true;
+        await game_info.save();
+        io.to(gameRoom).emit("check_user_ready_state_client", "game_start");
+      } else {
+        socket.emit("check_user_ready_state_client", "user_ready");
+      }
+    } catch (error) {
+      console.log("error", error);
+    }
+  });
 
   socket.on("get_players_info", async (data) => {
     const { game_key } = data;
@@ -540,7 +621,7 @@ export const GAME = (socket: Socket) => {
   });
 
   socket.on("check_battle_card", async (data) => {
-    const { game_key, player_id, card_id, menu_id, enemy_id } = data;
+    const { game_key, player_id, enemy_id, card_id, menu_id } = data;
     try {
       const game_info = (await GamesModel.findOne({
         game_key: game_key,
@@ -601,8 +682,8 @@ export const GAME = (socket: Socket) => {
         return;
       }
 
-      // const matched_socket_id = gameClients[enemy_id];
-      // io.to(matched_socket_id).emit("enemy_hand_list", "battle_card_selected");
+      const matched_socket_id = gameClients[enemy_id];
+      io.to(matched_socket_id).emit("enemy_hand_list", "battle_card_selected");
 
       socket.emit("select_battle_card", {
         card: battle_card,
@@ -759,8 +840,8 @@ export const GAME = (socket: Socket) => {
         return;
       }
 
-      // const matched_socket_id = gameClients[enemy_id];
-      // io.to(matched_socket_id).emit("enemy_hand_list", "card_removed");
+      const matched_socket_id = gameClients[enemy_id];
+      io.to(matched_socket_id).emit("enemy_hand_list", "battle_card_removed");
     } catch (err) {
       console.log("err", err);
     }
@@ -865,7 +946,7 @@ export const GAME = (socket: Socket) => {
   //         cards: allCardsFlat,
   //       });
 
-  //       await start_cooldown_func(socket, gameId, game_info.game_key, 5);
+  //       await start_cooldown_func(gameId, game_info.game_key, 5);
   //     }
   //   } catch (err) {
   //     console.log("err", err);
@@ -973,7 +1054,7 @@ export const GAME = (socket: Socket) => {
           cards: allCardsFlat,
         });
 
-        await start_cooldown_func(socket, gameId, game_info.game_key, 5);
+        await start_cooldown_func(gameId, game_info.game_key, 5);
       }
     } catch (err) {
       console.error("Ошибка в обработчике select_card:", err);
