@@ -26,7 +26,7 @@ const GamesSchema = new Schema({
       user_type: { type: String, Default: "Player" },
       user_isReady: { type: Boolean, Default: false },
       user_lvl: { type: Number },
-      user_health: { type: Number, default: 100 },
+      user_health: { type: Number, default: 500 },
       user_ult: { type: Number, default: 0 },
       user_cards: {
         cards_power: { type: Number, default: 0 },

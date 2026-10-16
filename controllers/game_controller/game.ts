@@ -296,22 +296,27 @@ export const GAME = (socket: Socket) => {
         text: "Ничья! Урон одинаковый или взаимно заблокирован.",
       };
 
+      const game_ubi = game_info.users_battle_info;
+
+      const users_cards = game_ubi.map((ubi) => ubi.user_cards.battle_cards);
+
+      const all_cards = users_cards.every((cards) => cards.length === 0);
+
+      console.log("all_cards", all_cards);
+
       if (p1_damage > p2_damage) {
-        game_info.users_battle_info[0].user_ult += Number(p1_damage / 2);
-        game_info.users_battle_info[1].user_health -= Number(p1_damage);
+        if (game_ubi[0].user_ult >= 100) {
+          game_ubi[0].user_ult = 0;
+          game_ubi[1].user_health -= Number(p1_damage * 2);
+        } else {
+          game_ubi[0].user_ult += Number(p1_damage / 2);
+          game_ubi[1].user_health -= Number(p1_damage);
+        }
 
-        // await GamesModel.findOneAndUpdate(
-        //   { _id: gameId },
-        //   {
-        //     $inc: {
-        //       "users_battle_info.0.user_ult": + Number(p1_damage / 2),
-        //       "users_battle_info.1.user_health": - Number(p1_damage),
-        //     },
-        //   },
-        //   { new: true },
-        // );
-
-        if (game_info.users_battle_info[1].user_health <= 0) {
+        if (
+          game_info.users_battle_info[1].user_health <= 0 ||
+          (game_ubi[0].user_health > game_ubi[1].user_health && all_cards)
+        ) {
           await set_winner_func(player1.userId);
           result = {
             status: "win",
@@ -328,10 +333,18 @@ export const GAME = (socket: Socket) => {
           };
         }
       } else if (p2_damage > p1_damage) {
-        game_info.users_battle_info[1].user_ult += Number(p2_damage / 2);
-        game_info.users_battle_info[0].user_health -= Number(p2_damage);
+        if (game_ubi[1].user_ult >= 100) {
+          game_ubi[1].user_ult = 0;
+          game_ubi[0].user_health -= Number(p1_damage * 2);
+        } else {
+          game_ubi[1].user_ult += Number(p1_damage / 2);
+          game_ubi[0].user_health -= Number(p1_damage);
+        }
 
-        if (game_info.users_battle_info[0].user_health <= 0) {
+        if (
+          game_info.users_battle_info[0].user_health <= 0 ||
+          (game_ubi[1].user_health > game_ubi[0].user_health && all_cards)
+        ) {
           await set_winner_func(player2.userId);
           result = {
             status: "win",
