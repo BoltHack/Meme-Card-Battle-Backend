@@ -246,7 +246,7 @@ export const GAME = (socket: Socket) => {
       if (leveledUp) {
         console.log(`New lvl: ${currentLVL}!`);
       }
-
+      
       // return updatedUser ? updatedUser.lvlXP : null;
       return updatedUser ? currentXP - user_info.lvlXP : null;
     } catch (error) {
@@ -291,10 +291,11 @@ export const GAME = (socket: Socket) => {
       console.log(`Игрок 2 нанес чистый урон: ${p2_damage}`);
 
       let result = {
-        status: "draw",
+        status: null,
         winnerId: null,
         damage: 0,
-        text: "Ничья! Урон одинаковый или взаимно заблокирован.",
+        // text: "Ничья! Урон одинаковый или взаимно заблокирован.",
+        text: null,
       };
 
       const game_ubi = game_info.users_battle_info;
