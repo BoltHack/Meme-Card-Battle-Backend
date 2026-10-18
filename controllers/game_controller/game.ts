@@ -246,7 +246,7 @@ export const GAME = (socket: Socket) => {
       if (leveledUp) {
         console.log(`New lvl: ${currentLVL}!`);
       }
-      
+
       // return updatedUser ? updatedUser.lvlXP : null;
       return updatedUser ? currentXP - user_info.lvlXP : null;
     } catch (error) {
@@ -583,6 +583,11 @@ export const GAME = (socket: Socket) => {
 
       if (!user_info) {
         socket.emit("error_handler", "Пользователь не найден.");
+        return;
+      }
+
+      if (game_info.game_online.users.length < 2) {
+        socket.emit("error_handler", "Ваш противник вышел из игры.");
         return;
       }
 

@@ -6,6 +6,7 @@ import cors from "cors";
 import crypto from "crypto";
 import http from "http";
 import fileUpload from "express-fileupload";
+// import axios from "axios";
 import { Server, Socket } from "socket.io";
 
 import indexRouter from "./routes/index";
@@ -26,14 +27,18 @@ import GamesModel from "./models/GamesModel";
 import mongoose from "mongoose";
 
 const serverPort = process.env.BACKEND_PORT;
+// const FrontendIP = process.env.FRONTEND_IP || "http://localhost:5173";
 
 const app = express();
 const server = http.createServer(app);
+
 export const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
+    // origin: FrontendIP,
+    origin: "*",
     methods: ["GET", "POST"],
-    credentials: true,
+    // credentials: true,
+    allowedHeaders: ["ngrok-skip-browser-warning"],
   },
 });
 
@@ -522,8 +527,9 @@ io.on("connection", async (socket) => {
 
 app.use(
   cors({
-    origin: "http://localhost:5173",
-    credentials: true,
+    origin: "*",
+    // credentials: true,
+    allowedHeaders: ["ngrok-skip-browser-warning"],
   }),
 );
 
@@ -563,7 +569,6 @@ async function launchApp() {
     await start();
 
     server.listen(serverPort, () => {
-      // console.log(`Сервер запущен на порту ${serverPort}`);
       initLogger("info", `Сервер запущен на порту ${serverPort}`);
     });
   } catch (err) {
