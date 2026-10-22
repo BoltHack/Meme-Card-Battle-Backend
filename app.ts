@@ -27,7 +27,7 @@ import GamesModel from "./models/GamesModel";
 import mongoose from "mongoose";
 
 const serverPort = process.env.BACKEND_PORT;
-const FrontendIP = process.env.FRONTEND_IP || "http://localhost:5173";
+const FrontendIP = process.env.FRONTEND_IP;
 
 const app = express();
 const server = http.createServer(app);
@@ -38,6 +38,7 @@ export const io = new Server(server, {
     // origin: "*",
     methods: ["GET", "POST"],
     credentials: true,
+    optionsSuccessStatus: 200,
     allowedHeaders: [
       "Content-Type",
       "Authorization",
@@ -529,6 +530,13 @@ io.on("connection", async (socket) => {
   });
 });
 
+// app.use((req, res, next) => {
+//   if (!req.headers.origin || req.headers.origin !== FrontendIP) {
+//     return res.status(403).json({ error: "Прямой доступ запрещен" });
+//   }
+//   next();
+// });
+
 app.use(
   cors({
     // origin: function (origin, callback) {
@@ -536,6 +544,7 @@ app.use(
     // },
     origin: FrontendIP,
     credentials: true,
+    optionsSuccessStatus: 200,
     allowedHeaders: [
       "Content-Type",
       "Authorization",
