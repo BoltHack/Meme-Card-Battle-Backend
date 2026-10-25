@@ -1018,11 +1018,11 @@ class AdminController_Post {
       const updatedHelp = await HelpsModel.findOneAndUpdate(
         {
           _id: help_id,
-          "link.path": {
-            $elemMatch: {
-              "link.path": { $ne: link_path },
-            },
-          },
+          // "link.path": {
+          //   $elemMatch: {
+          //     "link.path": { $ne: link_path },
+          //   },
+          // },
         },
         {
           $set: {
