@@ -17,29 +17,19 @@ router.get("/", CheckMaintenanceMode, ViewController.MainView);
 router.get(
   "/help-center",
   CheckMaintenanceMode,
-  ViewController.ReadPage_json("help-center_categories"),
+  ViewController.HelpCenterView,
 );
 
 router.get(
-  "/how-to-play",
+  "/help-center/:help_request",
   CheckMaintenanceMode,
-  ViewController.ReadPage_docs("how-to-play"),
+  ViewController.HelpCenterInfoView,
 );
 
 router.get(
-  "/terms-of-use",
+  "/documents/:document",
   CheckMaintenanceMode,
-  ViewController.ReadPage_docs("terms-of-use"),
-);
-router.get(
-  "/privacy-policy",
-  CheckMaintenanceMode,
-  ViewController.ReadPage_docs("privacy-policy"),
-);
-router.get(
-  "/cookie-policy",
-  CheckMaintenanceMode,
-  ViewController.ReadPage_docs("cookie-policy"),
+  ViewController.DocumentsView,
 );
 
 router.get("/blog", CheckMaintenanceMode, ViewController.BlogView);

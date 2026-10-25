@@ -105,6 +105,44 @@ admin.get(
 );
 
 admin.get(
+  "/help/create",
+  authenticateJWT,
+  verifyPermissions("Admin"),
+  PageRender("auth"),
+);
+admin.get(
+  "/help/list",
+  authenticateJWT,
+  verifyPermissions("Admin"),
+  AdminController_View.HelpListView,
+);
+admin.get(
+  "/help/:help_id/edit",
+  authenticateJWT,
+  verifyPermissions("Admin"),
+  AdminController_View.EditHelpView,
+);
+
+admin.get(
+  "/documents/create",
+  authenticateJWT,
+  verifyPermissions("Admin"),
+  PageRender("auth"),
+);
+admin.get(
+  "/documents/list",
+  authenticateJWT,
+  verifyPermissions("Admin"),
+  AdminController_View.DocumentsListView,
+);
+admin.get(
+  "/documents/:document_id/edit",
+  authenticateJWT,
+  verifyPermissions("Admin"),
+  AdminController_View.EditDocumentsView,
+);
+
+admin.get(
   "/logs",
   authenticateJWT,
   verifyPermissions("Admin"),
@@ -193,6 +231,44 @@ admin.post(
   authenticateJWT,
   verifyPermissions("Admin"),
   AdminController_Post.DeleteLinkPost,
+);
+
+admin.post(
+  "/help/create",
+  authenticateJWT,
+  verifyPermissions("Admin"),
+  AdminController_Post.CreateHelpPost,
+);
+admin.post(
+  "/help/:help_id/edit",
+  authenticateJWT,
+  verifyPermissions("Admin"),
+  AdminController_Post.EditHelpPost,
+);
+admin.post(
+  "/help/:help_id/delete",
+  authenticateJWT,
+  verifyPermissions("Admin"),
+  AdminController_Post.DeleteHelpPost,
+);
+
+admin.post(
+  "/documents/create",
+  authenticateJWT,
+  verifyPermissions("Admin"),
+  AdminController_Post.CreateDocumentsPost,
+);
+admin.post(
+  "/documents/:document_id/edit",
+  authenticateJWT,
+  verifyPermissions("Admin"),
+  AdminController_Post.EditDocumentsPost,
+);
+admin.post(
+  "/documents/:document_id/delete",
+  authenticateJWT,
+  verifyPermissions("Admin"),
+  AdminController_Post.DeleteDocumentsPost,
 );
 
 admin.post(

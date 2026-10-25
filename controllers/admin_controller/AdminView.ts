@@ -8,6 +8,8 @@ import { PageRender_v2 } from "../../middlewares/PageRender";
 import BlogsModel from "../../models/BlogsModel";
 import UsersModel from "../../models/UsersModel";
 import CardsModel from "../../models/CardsModel";
+import HelpsModel from "../../models/HelpsModel";
+import DocumentsModel from "../../models/DocumentsModel";
 
 import App_GlobalConfigModel from "../../models/admin/App_GlobalConfigModel";
 import App_CasesConfigModel from "../../models/admin/App_CasesConfigModel";
@@ -376,6 +378,117 @@ class AdminController_View {
         icon: link_data.icon,
         priority: link_data.priority,
         main_priority: link_data.main_priority,
+      };
+
+      return PageRender_v2("auth", renderData)(req, res, next);
+    } catch (err) {
+      console.error("Ошибка:", err);
+      return res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    }
+  };
+
+  static HelpListView = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const config = await HelpsModel.find({});
+
+      const renderData = config.map((item: any) => {
+        return {
+          id: item._id.toString(),
+          title: item.title,
+          summary: item.summary,
+          isVisibility: item.isVisibility,
+        };
+      });
+
+      return PageRender_v2("auth", renderData)(req, res, next);
+    } catch (err) {
+      console.error("Ошибка:", err);
+      return res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    }
+  };
+
+  static EditHelpView = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { help_id } = req.params;
+
+      const config = await HelpsModel.findById(help_id);
+
+      if (!config) {
+        return res.status(404).json({ error: "Данные не найдены." });
+      }
+
+      const renderData = {
+        id: config._id.toString(),
+        title: config.title || "",
+        summary: config.summary || "",
+        color: config?.icon.color || "",
+        filter: config?.icon.filter || "",
+        link_title: config?.link.title || "",
+        link_href: config?.link.href || "",
+        link_path: config?.link.path || "",
+        content: config.content || "",
+      };
+
+      return PageRender_v2("auth", renderData)(req, res, next);
+    } catch (err) {
+      console.error("Ошибка:", err);
+      return res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    }
+  };
+
+  static DocumentsListView = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const config = await DocumentsModel.find({});
+
+      const renderData = config.map((item: any) => {
+        return {
+          id: item._id.toString(),
+          path_name: item.path_name,
+          title: item.title,
+          summary: item.summary,
+          isVisibility: item.isVisibility,
+        };
+      });
+
+      return PageRender_v2("auth", renderData)(req, res, next);
+    } catch (err) {
+      console.error("Ошибка:", err);
+      return res.status(500).json({ error: "Внутренняя ошибка сервера" });
+    }
+  };
+
+  static EditDocumentsView = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { document_id } = req.params;
+
+      const config = await DocumentsModel.findById(document_id);
+
+      if (!config) {
+        return res.status(404).json({ error: "Данные не найдены." });
+      }
+
+      const renderData = {
+        id: config._id.toString(),
+        path_name: config.path_name || "",
+        title: config.title || "",
+        summary: config.summary || "",
+        content: config.content || "",
       };
 
       return PageRender_v2("auth", renderData)(req, res, next);

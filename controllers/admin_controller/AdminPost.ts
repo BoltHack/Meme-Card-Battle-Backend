@@ -37,6 +37,9 @@ async function saveAndOptimizeSvg(
 import UsersModel from "../../models/UsersModel";
 import CardsModel from "../../models/CardsModel";
 import BlogsModel from "../../models/BlogsModel";
+import HelpsModel from "../../models/HelpsModel";
+import DocumentsModel from "../../models/DocumentsModel";
+
 import AppModel from "../../models/admin/App_GlobalConfigModel";
 import App_CaseConfigModel from "../../models/admin/App_CasesConfigModel";
 import App_GlobalConfigModel from "../../models/admin/App_GlobalConfigModel";
@@ -898,6 +901,220 @@ class AdminController_Post {
       return res.status(200).json({ success: "Ссылка успешно удалена!" });
     } catch (err) {
       console.error("Ошибка в DeleteLinkPost:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Неизвестная ошибка";
+      return res.status(500).json({ error: errorMessage });
+    }
+  };
+
+  static CreateHelpPost = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const {
+        title,
+        summary,
+        color,
+        filter,
+        link_title,
+        link_href,
+        link_path,
+        content,
+      } = req.body;
+
+      const user = req.user;
+      if (!user || user.role !== "Admin") return;
+
+      await HelpsModel.create({
+        title: title,
+        summary: summary,
+        icon: {
+          color: color,
+          filter: filter,
+        },
+        link: {
+          title: link_title,
+          href: link_href,
+          path: link_path,
+        },
+        content: content,
+      });
+
+      return res.status(200).json({ success: "Данные успешно добавлены!" });
+    } catch (err) {
+      console.error("Ошибка в CreateHelpPost:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Неизвестная ошибка";
+      return res.status(500).json({ error: errorMessage });
+    }
+  };
+
+  static EditHelpPost = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { help_id } = req.params;
+      const {
+        title,
+        summary,
+        color,
+        filter,
+        link_title,
+        link_href,
+        link_path,
+        content,
+      } = req.body;
+
+      const user = req.user;
+      if (!user || user.role !== "Admin") return;
+
+      await HelpsModel.findOneAndUpdate(
+        { _id: help_id },
+        {
+          $set: {
+            title: title,
+            summary: summary,
+            icon: {
+              color: color,
+              filter: filter,
+            },
+            link: {
+              title: link_title,
+              href: link_href,
+              path: link_path,
+            },
+            // content: content,
+            content: cleanTextRegex(content),
+          },
+        },
+        { new: true },
+      );
+
+      return res.status(200).json({ success: "Данные успешно сохранены!" });
+    } catch (err) {
+      console.error("Ошибка в EditHelpPost:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Неизвестная ошибка";
+      return res.status(500).json({ error: errorMessage });
+    }
+  };
+
+  static DeleteHelpPost = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { help_id } = req.params;
+
+      const user = req.user;
+      if (!user || user.role !== "Admin") return;
+
+      const help_updated = await HelpsModel.findById(help_id);
+
+      if (!help_updated) {
+        return res.status(404).json({ error: "Данные не найдены." });
+      }
+
+      await help_updated.deleteOne();
+
+      return res.status(200).json({ success: "Данные успешно удалены!" });
+    } catch (err) {
+      console.error("Ошибка в DeleteHelpPost:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Неизвестная ошибка";
+      return res.status(500).json({ error: errorMessage });
+    }
+  };
+
+  static CreateDocumentsPost = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { path_name, title, summary, content } = req.body;
+
+      const user = req.user;
+      if (!user || user.role !== "Admin") return;
+
+      await DocumentsModel.create({
+        path_name: path_name,
+        title: title,
+        summary: summary,
+        content: content,
+      });
+
+      return res.status(200).json({ success: "Данные успешно добавлены!" });
+    } catch (err) {
+      console.error("Ошибка в CreateDocumentsPost:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Неизвестная ошибка";
+      return res.status(500).json({ error: errorMessage });
+    }
+  };
+
+  static EditDocumentsPost = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { document_id } = req.params;
+      const { path_name, title, summary, content } = req.body;
+
+      const user = req.user;
+      if (!user || user.role !== "Admin") return;
+
+      await DocumentsModel.findOneAndUpdate(
+        { _id: document_id },
+        {
+          $set: {
+            path_name: path_name,
+            title: title,
+            summary: summary,
+            content: cleanTextRegex(content),
+            date: Date.now(),
+          },
+        },
+        { new: true },
+      );
+
+      return res.status(200).json({ success: "Данные успешно сохранены!" });
+    } catch (err) {
+      console.error("Ошибка в EditHelpPost:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Неизвестная ошибка";
+      return res.status(500).json({ error: errorMessage });
+    }
+  };
+
+  static DeleteDocumentsPost = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { document_id } = req.params;
+
+      const user = req.user;
+      if (!user || user.role !== "Admin") return;
+
+      const document_updated = await DocumentsModel.findById(document_id);
+
+      if (!document_updated) {
+        return res.status(404).json({ error: "Данные не найдены." });
+      }
+
+      await document_updated.deleteOne();
+
+      return res.status(200).json({ success: "Данные успешно удалены!" });
+    } catch (err) {
+      console.error("Ошибка в DeleteHelpPost:", err);
       const errorMessage =
         err instanceof Error ? err.message : "Неизвестная ошибка";
       return res.status(500).json({ error: errorMessage });

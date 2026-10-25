@@ -5,12 +5,13 @@ import path from "path";
 import { PageRender_v2 } from "../../middlewares/PageRender";
 
 import GamesModel from "../../models/GamesModel";
-import CardsModel from "../../models/CardsModel";
 import UsersModel from "../../models/UsersModel";
 import BlogsModel from "../../models/BlogsModel";
+import HelpsModel from "../../models/HelpsModel";
 import mongoose, { Types } from "mongoose";
 import App_CasesConfigModel from "../../models/admin/App_CasesConfigModel";
 import App_GlobalConfigModel from "../../models/admin/App_GlobalConfigModel";
+import DocumentsModel from "../../models/DocumentsModel";
 
 interface UserData {
   id: string;
@@ -61,66 +62,59 @@ interface BlogData {
   };
 }
 class ViewController {
-  static ReadPage_docs = (setFilePath: string) => {
-    return async (req: CustomRequest, res: Response, next: NextFunction) => {
-      try {
-        const filePath = path.join(
-          process.cwd(),
-          "data",
-          "docs",
-          `${setFilePath}.md`,
-        );
+  // static ReadPage_docs = (setFilePath: string) => {
+  //   return async (req: CustomRequest, res: Response, next: NextFunction) => {
+  //     try {
+  //       const filePath = path.join(
+  //         process.cwd(),
+  //         "data",
+  //         "docs",
+  //         `${setFilePath}.md`,
+  //       );
 
-        if (!fs.existsSync(filePath)) {
-          return res.status(404).json({ error: "Страница не найдена" });
-        }
+  //       if (!fs.existsSync(filePath)) {
+  //         return res.status(404).json({ error: "Страница не найдена" });
+  //       }
 
-        // const content = fs.readFileSync(filePath, 'utf8');
-        const content = await fs.promises.readFile(filePath, "utf8");
+  //       const content = await fs.promises.readFile(filePath, "utf8");
 
-        // return res.status(200).json({
-        //     content: content,
-        // });
-        return PageRender_v2("no_auth", content)(req, res, next);
-      } catch (err) {
-        console.error("Ошибка:", err);
-        const errorMessage =
-          err instanceof Error ? err.message : "Неизвестная ошибка";
-        return res.status(500).json({ error: errorMessage });
-      }
-    };
-  };
+  //       return PageRender_v2("no_auth", content)(req, res, next);
+  //     } catch (err) {
+  //       console.error("Ошибка:", err);
+  //       const errorMessage =
+  //         err instanceof Error ? err.message : "Неизвестная ошибка";
+  //       return res.status(500).json({ error: errorMessage });
+  //     }
+  //   };
+  // };
 
-  static ReadPage_json = (setFilePath: string) => {
-    return async (req: CustomRequest, res: Response, next: NextFunction) => {
-      try {
-        const filePath = path.join(
-          process.cwd(),
-          "data",
-          "json",
-          `${setFilePath}.json`,
-        );
+  // static ReadPage_json = (setFilePath: string) => {
+  //   return async (req: CustomRequest, res: Response, next: NextFunction) => {
+  //     try {
+  //       const filePath = path.join(
+  //         process.cwd(),
+  //         "data",
+  //         "json",
+  //         `${setFilePath}.json`,
+  //       );
 
-        if (!fs.existsSync(filePath)) {
-          return res.status(404).json({ error: "Страница не найдена" });
-        }
+  //       if (!fs.existsSync(filePath)) {
+  //         return res.status(404).json({ error: "Страница не найдена" });
+  //       }
 
-        const fileContent = await fs.promises.readFile(filePath, "utf8");
+  //       const fileContent = await fs.promises.readFile(filePath, "utf8");
 
-        const content = JSON.parse(fileContent);
+  //       const content = JSON.parse(fileContent);
 
-        // return res.status(200).json({
-        //     categories: categoryData || "",
-        // });
-        return PageRender_v2("no_auth", content)(req, res, next);
-      } catch (err) {
-        console.error("Ошибка:", err);
-        const errorMessage =
-          err instanceof Error ? err.message : "Неизвестная ошибка";
-        return res.status(500).json({ error: errorMessage });
-      }
-    };
-  };
+  //       return PageRender_v2("no_auth", content)(req, res, next);
+  //     } catch (err) {
+  //       console.error("Ошибка:", err);
+  //       const errorMessage =
+  //         err instanceof Error ? err.message : "Неизвестная ошибка";
+  //       return res.status(500).json({ error: errorMessage });
+  //     }
+  //   };
+  // };
 
   static GetDataView = async (
     req: CustomRequest,
@@ -193,6 +187,106 @@ class ViewController {
       const renderData = {
         linksData: linksData,
         blogData: blogData,
+      };
+
+      return PageRender_v2("no_auth", renderData)(req, res, next);
+    } catch (err) {
+      console.error("Ошибка:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Неизвестная ошибка";
+      return res.status(500).json({ error: errorMessage });
+    }
+  };
+
+  static HelpCenterView = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const help_info = await HelpsModel.find({});
+
+      const renderData = help_info
+        .filter((item) => item.isVisibility === true)
+        .map((item) => {
+          return {
+            title: item.title,
+            summary: item.summary,
+            color: item?.icon?.color,
+            flter: item?.icon?.filter,
+            link_title: item?.link?.title,
+            link_href: item?.link?.href,
+            link_path: item?.link?.path,
+          };
+        });
+
+      return PageRender_v2("no_auth", renderData)(req, res, next);
+    } catch (err) {
+      console.error("Ошибка:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Неизвестная ошибка";
+      return res.status(500).json({ error: errorMessage });
+    }
+  };
+
+  static HelpCenterInfoView = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { help_request } = req.params;
+
+      let filteredQuery: Record<string, any> = {
+        "link.path": help_request,
+        $or: [{ isVisibility: true }, { isVisibility: { $exists: false } }],
+      };
+
+      const help_info = await HelpsModel.findOne(filteredQuery);
+
+      if (!help_info) {
+        return res.status(404).json({ error: "not found" });
+      }
+
+      const renderData = {
+        title: help_info?.title,
+        summary: help_info?.summary,
+        content: help_info.content,
+      };
+
+      return PageRender_v2("no_auth", renderData)(req, res, next);
+    } catch (err) {
+      console.error("Ошибка:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Неизвестная ошибка";
+      return res.status(500).json({ error: errorMessage });
+    }
+  };
+
+  static DocumentsView = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { document } = req.params;
+
+      let filteredQuery: Record<string, any> = {
+        path_name: document,
+        $or: [{ isVisibility: true }, { isVisibility: { $exists: false } }],
+      };
+
+      const help_info = await DocumentsModel.findOne(filteredQuery);
+
+      if (!help_info) {
+        return res.status(404).json({ error: "not found" });
+      }
+
+      const renderData = {
+        title: help_info?.title,
+        summary: help_info?.summary,
+        content: help_info.content,
+        date: help_info.date,
       };
 
       return PageRender_v2("no_auth", renderData)(req, res, next);
