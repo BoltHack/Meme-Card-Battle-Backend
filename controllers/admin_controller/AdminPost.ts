@@ -102,7 +102,9 @@ class AdminController_Post {
     try {
       const user = req.user;
 
-      if (!user || user.role !== "Admin") return;
+      if (!user || user.role !== "Admin") {
+        return res.status(403).json({ error: "Доступ запрещен" });
+      }
 
       const {
         card_name,
@@ -195,7 +197,9 @@ class AdminController_Post {
       const { card_id } = req.params;
       const user = req.user;
 
-      if (!user || user.role !== "Admin") return;
+      if (!user || user.role !== "Admin") {
+        return res.status(403).json({ error: "Доступ запрещен" });
+      }
 
       const card_updated = await CardsModel.findById(card_id);
 
@@ -236,7 +240,9 @@ class AdminController_Post {
     try {
       const user = req.user;
 
-      if (!user || user.role !== "Admin") return;
+      if (!user || user.role !== "Admin") {
+        return res.status(403).json({ error: "Доступ запрещен" });
+      }
 
       const user_info = await UsersModel.findById(user.id);
       if (!user_info) return res.status(404).json({ error: "Игрок не найден" });
@@ -296,7 +302,9 @@ class AdminController_Post {
         } = req.body;
         const user = req.user;
 
-        if (!user || user.role !== "Admin") return;
+        if (!user || user.role !== "Admin") {
+          return res.status(403).json({ error: "Доступ запрещен" });
+        }
 
         let blogIdString: string;
         let blog_info: any;
@@ -418,7 +426,9 @@ class AdminController_Post {
       const { blog_id } = req.params;
       const user = req.user;
 
-      if (!user || user.role !== "Admin") return;
+      if (!user || user.role !== "Admin") {
+        return res.status(403).json({ error: "Доступ запрещен" });
+      }
 
       const blog_updated = await BlogsModel.findById(blog_id);
 
@@ -460,7 +470,9 @@ class AdminController_Post {
       const { gallery_cover } = req.body;
 
       const user = req.user;
-      if (!user || user.role !== "Admin") return;
+      if (!user || user.role !== "Admin") {
+        return res.status(403).json({ error: "Доступ запрещен" });
+      }
 
       let imagePath = "";
 
@@ -530,7 +542,9 @@ class AdminController_Post {
         req.body;
 
       const user = req.user;
-      if (!user || user.role !== "Admin") return;
+      if (!user || user.role !== "Admin") {
+        return res.status(403).json({ error: "Доступ запрещен" });
+      }
 
       await App_CaseConfigModel.findByIdAndUpdate(
         "cases_config_app",
@@ -569,7 +583,9 @@ class AdminController_Post {
       const { case_id } = req.params;
 
       const user = req.user;
-      if (!user || user.role !== "Admin") return;
+      if (!user || user.role !== "Admin") {
+        return res.status(403).json({ error: "Доступ запрещен" });
+      }
 
       await App_CaseConfigModel.findOneAndUpdate(
         { _id: "cases_config_app" },
@@ -890,7 +906,9 @@ class AdminController_Post {
       const { link_id } = req.params;
 
       const user = req.user;
-      if (!user || user.role !== "Admin") return;
+      if (!user || user.role !== "Admin") {
+        return res.status(403).json({ error: "Доступ запрещен" });
+      }
 
       await App_GlobalConfigModel.findOneAndUpdate(
         { _id: "global_config_app" },
@@ -925,7 +943,19 @@ class AdminController_Post {
       } = req.body;
 
       const user = req.user;
-      if (!user || user.role !== "Admin") return;
+      if (!user || user.role !== "Admin") {
+        return res.status(403).json({ error: "Доступ запрещен" });
+      }
+
+      const isPathTaken = await HelpsModel.findOne({
+        "link.path": link_path,
+      });
+
+      if (isPathTaken) {
+        return res
+          .status(400)
+          .json({ error: "Этот путь уже используется в другой записи." });
+      }
 
       await HelpsModel.create({
         title: title,
@@ -970,10 +1000,30 @@ class AdminController_Post {
       } = req.body;
 
       const user = req.user;
-      if (!user || user.role !== "Admin") return;
+      if (!user || user.role !== "Admin") {
+        return res.status(403).json({ error: "Доступ запрещен" });
+      }
 
-      await HelpsModel.findOneAndUpdate(
-        { _id: help_id },
+      const isPathTaken = await HelpsModel.findOne({
+        _id: { $ne: help_id },
+        "link.path": link_path,
+      });
+
+      if (isPathTaken) {
+        return res
+          .status(400)
+          .json({ error: "Этот путь уже используется в другой записи." });
+      }
+
+      const updatedHelp = await HelpsModel.findOneAndUpdate(
+        {
+          _id: help_id,
+          "link.path": {
+            $elemMatch: {
+              "link.path": { $ne: link_path },
+            },
+          },
+        },
         {
           $set: {
             title: title,
@@ -987,12 +1037,15 @@ class AdminController_Post {
               href: link_href,
               path: link_path,
             },
-            // content: content,
             content: cleanTextRegex(content),
           },
         },
         { new: true },
       );
+
+      if (!updatedHelp) {
+        return res.status(404).json({ error: "Запись не найдена." });
+      }
 
       return res.status(200).json({ success: "Данные успешно сохранены!" });
     } catch (err) {
@@ -1012,7 +1065,9 @@ class AdminController_Post {
       const { help_id } = req.params;
 
       const user = req.user;
-      if (!user || user.role !== "Admin") return;
+      if (!user || user.role !== "Admin") {
+        return res.status(403).json({ error: "Доступ запрещен" });
+      }
 
       const help_updated = await HelpsModel.findById(help_id);
 
@@ -1040,7 +1095,19 @@ class AdminController_Post {
       const { path_name, title, summary, content } = req.body;
 
       const user = req.user;
-      if (!user || user.role !== "Admin") return;
+      if (!user || user.role !== "Admin") {
+        return res.status(403).json({ error: "Доступ запрещен" });
+      }
+
+      const isPathTaken = await DocumentsModel.findOne({
+        path_name: path_name,
+      });
+
+      if (isPathTaken) {
+        return res
+          .status(400)
+          .json({ error: "Этот путь уже используется в другой записи." });
+      }
 
       await DocumentsModel.create({
         path_name: path_name,
@@ -1068,9 +1135,22 @@ class AdminController_Post {
       const { path_name, title, summary, content } = req.body;
 
       const user = req.user;
-      if (!user || user.role !== "Admin") return;
+      if (!user || user.role !== "Admin") {
+        return res.status(403).json({ error: "Доступ запрещен" });
+      }
 
-      await DocumentsModel.findOneAndUpdate(
+      const isPathTaken = await DocumentsModel.findOne({
+        _id: { $ne: document_id },
+        path_name: path_name,
+      });
+
+      if (isPathTaken) {
+        return res
+          .status(400)
+          .json({ error: "Этот путь уже используется в другой записи." });
+      }
+
+      const updatedDocument = await DocumentsModel.findOneAndUpdate(
         { _id: document_id },
         {
           $set: {
@@ -1083,6 +1163,10 @@ class AdminController_Post {
         },
         { new: true },
       );
+
+      if (!updatedDocument) {
+        return res.status(404).json({ error: "Документ не найден." });
+      }
 
       return res.status(200).json({ success: "Данные успешно сохранены!" });
     } catch (err) {
@@ -1102,7 +1186,9 @@ class AdminController_Post {
       const { document_id } = req.params;
 
       const user = req.user;
-      if (!user || user.role !== "Admin") return;
+      if (!user || user.role !== "Admin") {
+        return res.status(403).json({ error: "Доступ запрещен" });
+      }
 
       const document_updated = await DocumentsModel.findById(document_id);
 
