@@ -339,7 +339,7 @@ class AdminController_View {
           link: links.link,
           icon: links.icon,
           priority: String(links.priority),
-          main_priority: String(links.main_priority),
+          main_priority: Boolean(links.main_priority),
         };
       });
 

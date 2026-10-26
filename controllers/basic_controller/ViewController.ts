@@ -131,7 +131,7 @@ class ViewController {
           link: links.link,
           icon: links.icon,
           priority: Number(links.priority),
-          // main_priority: Boolean(links.main_priority),
+          main_priority: Boolean(links.main_priority),
         };
       });
 
