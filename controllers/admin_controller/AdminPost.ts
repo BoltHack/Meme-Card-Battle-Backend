@@ -910,6 +910,22 @@ class AdminController_Post {
         return res.status(403).json({ error: "Доступ запрещен" });
       }
 
+      const filePath = path.join(
+        process.cwd(),
+        "public",
+        "uploads",
+        "LinksSvg",
+        link_id.toString(),
+      );
+
+      fs.rm(filePath, { recursive: true, force: true }, (err) => {
+        if (err) {
+          console.error("Ошибка при удалении папки:", err);
+          return;
+        }
+        console.log("Папка успешно удалена");
+      });
+
       await App_GlobalConfigModel.findOneAndUpdate(
         { _id: "global_config_app" },
         { $pull: { links: { _id: link_id } } },

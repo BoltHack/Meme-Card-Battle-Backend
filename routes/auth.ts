@@ -10,9 +10,12 @@ const auth = express.Router();
 
 auth.get("/sign-in", CheckMaintenanceMode, AuthController.SignInView);
 
-auth.post('/registerUser', Validate.validateRegister, AuthController.registerNewUser)
-auth.post('/loginUser', Validate.validateLogin, AuthController.loginUser)
+auth.post('/registerUser', Validate.ValidateRegister, AuthController.registerNewUser);
+auth.post('/loginUser', Validate.ValidateLogin, AuthController.loginUser);
 
-auth.post('/logout', authenticateJWT, AuthController.logout)
+auth.post('/change-password', authenticateJWT, AuthController.ChangePassword);
+
+auth.post('/logout', authenticateJWT, AuthController.logout);
+auth.post("/logout-all-accounts", authenticateJWT, AuthController.logoutAllAccounts);
 
 export default auth;

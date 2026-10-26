@@ -119,7 +119,7 @@ class AuthController {
       });
 
       initLogger("info", `Пользователь ${newUser.name} создал аккаунт`);
-      
+
       return res.status(200).json({
         success: "Успешная регистрация!",
         referer: "/play",
@@ -243,6 +243,119 @@ class AuthController {
     }
   };
 
+  static ChangePassword = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { old_password, new_password, confirm_password } = req.body;
+
+      const user = req.user as any;
+      const userInfo = await UsersModel.findById(user.id);
+      
+      if (!userInfo) {
+        return res.status(404).json({ error: "Пользователь не найден." });
+      }
+
+      if (!old_password || !new_password || !confirm_password) {
+        return res
+          .status(400)
+          .json({ error: "Пожалуйста, заполните все поля ввода." });
+      }
+
+      const pass = await bcrypt.compare(old_password, userInfo.password);
+
+      if (!pass) {
+        return res.status(401).json({ error: "Неверный старый пароль." });
+      }
+
+      if (!new_password || !confirm_password) {
+        return res
+          .status(401)
+          .json({ error: "Пароль и подтверджение пароля обязательны." });
+      }
+
+      if (new_password !== confirm_password) {
+        return res.status(401).json({ error: "Пароли не совпадают." });
+      }
+
+      if (
+        new_password.length < 6 ||
+        new_password.length > 50 ||
+        confirm_password.length < 6 ||
+        confirm_password.length > 50
+      ) {
+        return res.status(401).json({
+          error:
+            "Пароль должен содержать минимум 6 символов и максимум 50 символов.",
+        });
+      }
+
+      userInfo.tokenVersion = (userInfo.tokenVersion || 0) + 1;
+
+      const accessToken = jwt.sign(
+        {
+          id: userInfo._id,
+          name: userInfo.name,
+          role: userInfo.role,
+          tokenVersion: userInfo.tokenVersion,
+        },
+        ACCESS_TOKEN_SECRET,
+        { expiresIn: "15m" },
+      );
+
+      const refreshToken = jwt.sign(
+        {
+          id: userInfo._id,
+          tokenVersion: userInfo.tokenVersion,
+        },
+        REFRESH_TOKEN_SECRET,
+        { expiresIn: "10d" },
+      );
+
+      const hash = crypto
+        .createHash("sha256")
+        .update(refreshToken)
+        .digest("hex");
+      console.log("auth hash", hash);
+      userInfo.refreshTokenHash = hash;
+
+      res.cookie("access_token", accessToken, {
+        httpOnly: true,
+        secure: false,
+        maxAge: parseMaxAge("15m"),
+      });
+      res.cookie("refresh_token", refreshToken, {
+        httpOnly: true,
+        secure: false,
+        maxAge: parseMaxAge("10d"),
+      });
+
+      const hashedPassword = await bcrypt.hash(new_password, 10);
+
+      const updatePassword = await UsersModel.findByIdAndUpdate(
+        { _id: userInfo._id },
+        {
+          $set: {
+            password: hashedPassword,
+            tokenVersion: userInfo.tokenVersion,
+          },
+        },
+        { new: true },
+      );
+
+      if (!updatePassword) {
+        return res.status(401).json({ error: "Пользователь не найден." });
+      }
+
+      return res.status(200).json({ success: "Пароль успешно изменён!" });
+    } catch (err) {
+      console.error("Ошибка:", err);
+      return res.status(500).json({ error: err.message });
+    }
+  };
+
   static logout = async (
     req: CustomRequest,
     res: Response,
@@ -250,12 +363,46 @@ class AuthController {
   ) => {
     try {
       const user = req.user;
-      
+
       res.clearCookie("access_token");
       res.clearCookie("refresh_token");
 
       initLogger("info", `Пользователь ${user.name} вышел из аккаунта`);
       return res.status(200).json({ success: "Вы вышли из системы" });
+    } catch (err) {
+      console.error("Ошибка:", err);
+      return res.status(500).json({ error: err.message });
+    }
+  };
+
+  static logoutAllAccounts = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const user = req.user as any;
+      const userInfo = await UsersModel.findById(user.id);
+
+      if (!userInfo) {
+        return res.status(404).json({ error: "Пользователь не найден" });
+      }
+
+      userInfo.tokenVersion = (userInfo.tokenVersion || 0) + 1;
+
+      await UsersModel.findByIdAndUpdate(
+        { _id: userInfo._id },
+        {
+          $set: { tokenVersion: userInfo.tokenVersion },
+        },
+        { new: true },
+      );
+
+      initLogger("info", `Пользователь ${user.name} вышел со всех устройств.`);
+
+      return res
+        .status(200)
+        .json({ success: "Успешный выход со всех аккаунтов!" });
     } catch (err) {
       console.error("Ошибка:", err);
       return res.status(500).json({ error: err.message });
