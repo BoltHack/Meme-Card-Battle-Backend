@@ -27,14 +27,17 @@ import GamesModel from "./models/GamesModel";
 import mongoose from "mongoose";
 
 const serverPort = process.env.BACKEND_PORT;
-const FrontendIP = process.env.FRONTEND_IP;
+// const FrontendIP = process.env.FRONTEND_IP;
 
 const app = express();
 const server = http.createServer(app);
 
 export const io = new Server(server, {
   cors: {
-    origin: FrontendIP,
+    // origin: FrontendIP,
+    origin: function (origin, callback) {
+      callback(null, true);
+    },
     // origin: "*",
     methods: ["GET", "POST"],
     credentials: true,
@@ -43,6 +46,7 @@ export const io = new Server(server, {
       "Content-Type",
       "Authorization",
       "ngrok-skip-browser-warning",
+      "skip_zrok_interstitial",
     ],
   },
 });
@@ -539,16 +543,18 @@ io.on("connection", async (socket) => {
 
 app.use(
   cors({
-    // origin: function (origin, callback) {
-    //   callback(null, true);
-    // },
-    origin: FrontendIP,
+    // origin: FrontendIP,
+    origin: function (origin, callback) {
+      callback(null, true);
+    },
+    // origin: "*",
     credentials: true,
     optionsSuccessStatus: 200,
     allowedHeaders: [
       "Content-Type",
       "Authorization",
       "ngrok-skip-browser-warning",
+      "skip_zrok_interstitial",
     ],
   }),
 );
