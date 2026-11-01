@@ -145,7 +145,7 @@ async function gameFountTimer(socket: any, player_id: string) {
   let isSearchCanceled = false;
 
   for (let i = 0; i <= 800; i++) {
-    console.log("i", i);
+    console.log("Поиск битвы...", i);
 
     const current_user_info = await UsersModel.findById(player_id);
     if (!current_user_info || current_user_info.gameInfo !== "Search") {
