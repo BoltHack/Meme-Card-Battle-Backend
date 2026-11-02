@@ -143,7 +143,7 @@ admin.get(
 );
 
 admin.get(
-  "/logs",
+  "/logs/:logs_type",
   authenticateJWT,
   verifyPermissions("Admin"),
   AdminController_View.LogsView,

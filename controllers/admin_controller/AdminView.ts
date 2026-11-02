@@ -504,20 +504,34 @@ class AdminController_View {
     next: NextFunction,
   ) => {
     try {
+      const { logs_type } = req.params;
+
+      let logs_category = "";
+
+      if (logs_type === "info") {
+        logs_category = "combined";
+      } else if (logs_type === "error") {
+        logs_category = "errors";
+      } else if (logs_type === "warn") {
+        logs_category = "warn";
+      } else {
+        return res.status(404).json({ error: "Данный лог пустой." });
+      }
+
       const date = new Date();
 
-      const getDay = date.getDate();
-      const getMonth = date.getMonth() + 1;
+      const getDay = String(date.getDate()).padStart(2, "0");
+      const getMonth = String(date.getMonth() + 1).padStart(2, "0");
       const getYear = date.getFullYear();
 
       const filePath = path.join(
         process.cwd(),
         "logs",
-        `combined-${getYear}-${getMonth}-${getDay}.log`,
+        `${logs_category}-${getYear}-${getMonth}-${getDay}.log`,
       );
 
       if (!fs.existsSync(filePath)) {
-        return res.status(404).json({ error: "Страница не найдена" });
+        return res.status(404).json({ error: "Страница не найдена." });
       }
 
       const content = await fs.promises.readFile(filePath, "utf8");
