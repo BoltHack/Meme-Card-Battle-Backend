@@ -19,6 +19,10 @@ const App_GlobalConfigSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    emailConfirmation: {
+      type: Boolean,
+      default: false,
+    },
     links: [
       {
         name: { type: String },
