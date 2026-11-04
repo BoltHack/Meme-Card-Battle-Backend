@@ -19,6 +19,10 @@ const UsersSchema = new Schema({
   lvl: { type: Number, min: 0, max: 100, default: 1 },
   lvlXP: { type: Number, default: 0 },
 
+  gamesCount: { type: Number, default: 0 },
+
+  rating: { type: Number, default: 100 },
+
   keys: [
     {
       _id: { type: Schema.Types.ObjectId },
