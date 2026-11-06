@@ -15,6 +15,7 @@ const UsersSchema = new Schema({
   money: { type: Number, min: 0, default: 0 },
 
   wins: { type: Number, default: 0 },
+  fires: { type: Number, default: 0 },
 
   lvl: { type: Number, min: 0, max: 100, default: 1 },
   lvlXP: { type: Number, default: 0 },

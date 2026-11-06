@@ -548,7 +548,7 @@ app.use((req, res, next) => {
       <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>403 | Доступ запрещен</title>
+          <title>403 Доступ запрещен</title>
           <style>
               :root {
                   --bg-color: #f8fafc;

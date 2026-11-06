@@ -298,6 +298,41 @@ class ViewController {
     }
   };
 
+  static ProfileView = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { user_name } = req.params;
+      const user_info = await UsersModel.findOne({ requestName: user_name.toLowerCase() });
+
+      if (!user_info) {
+        return res.status(404).json({ error: "not found" });
+      }
+
+      const renderData = {
+        name: user_info.name,
+        avatar: user_info.image,
+        coins: user_info.coins,
+        money: user_info.money,
+        wins: user_info.wins,
+        fires: user_info.fires,
+        lvl: user_info.lvl,
+        xp: user_info.lvlXP,
+        gamesCount: user_info.gamesCount,
+        rating: user_info.rating,
+      };
+
+      return PageRender_v2("no_auth", renderData)(req, res, next);
+    } catch (err) {
+      console.error("Ошибка:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Неизвестная ошибка";
+      return res.status(500).json({ error: errorMessage });
+    }
+  };
+
   static PlayView = async (
     req: CustomRequest,
     res: Response,
@@ -329,7 +364,7 @@ class ViewController {
     }
   };
 
-  static ProfileView = async (
+  static CollectionView = async (
     req: CustomRequest,
     res: Response,
     next: NextFunction,

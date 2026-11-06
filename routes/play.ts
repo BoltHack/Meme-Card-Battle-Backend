@@ -22,10 +22,10 @@ play.get("/", CheckMaintenanceMode, authenticateJWT, PageRender("auth"));
 // play.get("/main", CheckMaintenanceMode, authenticateJWT, PageRender("auth"));
 
 play.get(
-  "/profile",
+  "/collection",
   CheckMaintenanceMode,
   authenticateJWT,
-  ViewController.ProfileView,
+  ViewController.CollectionView,
 );
 
 play.get(

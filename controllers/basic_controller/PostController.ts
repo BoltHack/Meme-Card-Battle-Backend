@@ -77,6 +77,31 @@ async function createAvatar(req: any, userId: string, avatar: any) {
 }
 
 class PostController {
+  static RatingSearchPost = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const { search_name } = req.body;
+
+      const user_name = search_name.toLowerCase();
+
+      const user_info = await UsersModel.findOne({ requestName: user_name });
+
+      if (!user_info) {
+        return res.status(404).json({ error: "Пользователь не найден" });
+      }
+
+      return res.status(200).json({ userName: user_name });
+    } catch (err) {
+      console.error("Ошибка:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Неизвестная ошибка";
+      return res.status(500).json({ error: errorMessage });
+    }
+  };
+
   static GetCardsPost = async (
     req: CustomRequest,
     res: Response,
@@ -361,7 +386,7 @@ class PostController {
         0,
       );
 
-      if (user_cards_count >= 150) {
+      if (user_cards_count >= 250) {
         return res.status(403).json({ error: "Ваш инвентарь переполнен." });
       }
       // const user_keys = user_info.keys.find(

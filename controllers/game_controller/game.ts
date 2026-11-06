@@ -303,6 +303,7 @@ export const GAME = (socket: Socket) => {
           $inc: {
             lvlXP: loser_result.xpGained,
             gamesCount: 1,
+            fires: 1,
           },
         },
         { new: true },
