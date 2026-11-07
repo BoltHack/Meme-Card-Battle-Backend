@@ -530,8 +530,13 @@ class AdminController_View {
         `${logs_category}-${getYear}-${getMonth}-${getDay}.log`,
       );
 
-      if (!fs.existsSync(filePath)) {
-        return res.status(404).json({ error: "Страница не найдена." });
+      if (
+        !fs.existsSync(filePath) ||
+        (fs.existsSync(filePath) && fs.readFileSync(filePath).length < 1)
+      ) {
+        return res
+          .status(404)
+          .json({ error: "В этой категории логи отсутствуют." });
       }
 
       const content = await fs.promises.readFile(filePath, "utf8");
