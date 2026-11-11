@@ -32,27 +32,41 @@ class AdminController_View {
     next: NextFunction,
   ) => {
     try {
-      const { article_type } = req.params;
+      const { article_type, visibility } = req.params;
       const pageQuery = parseInt(req.query.page as string, 7);
       const page = isNaN(pageQuery) || pageQuery < 1 ? 1 : pageQuery;
 
       const limit = 7;
       const skip = (page - 1) * limit;
 
+      // const [allBlogs, totalBlogs] = await Promise.all([
+      //   BlogsModel.find(
+      //     article_type === "blog"
+      //       ? { category: { $ne: "news" } }
+      //       : { category: { $eq: "news" } },
+      //   )
+      //     .sort({ date: -1 })
+      //     .skip(skip)
+      //     .limit(limit),
+      //   BlogsModel.countDocuments(
+      //     article_type === "blog"
+      //       ? { category: { $ne: "news" } }
+      //       : { category: { $eq: "news" } },
+      //   ),
+      // ]);
       const [allBlogs, totalBlogs] = await Promise.all([
-        BlogsModel.find(
-          article_type === "blog"
-            ? { category: { $ne: "news" } }
-            : { category: { $eq: "news" } },
-        )
+        BlogsModel.find({
+          category: article_type === "blog" ? { $ne: "news" } : "news",
+          isVisibility: visibility,
+        })
           .sort({ date: -1 })
           .skip(skip)
           .limit(limit),
-        BlogsModel.countDocuments(
-          article_type === "blog"
-            ? { category: { $ne: "news" } }
-            : { category: { $eq: "news" } },
-        ),
+
+        BlogsModel.countDocuments({
+          category: article_type === "blog" ? { $ne: "news" } : "news",
+          isVisibility: visibility,
+        }),
       ]);
 
       const blogsData = allBlogs.map((blog) => ({
@@ -62,6 +76,7 @@ class AdminController_View {
         cover: blog.main_content?.cover,
         category: blog.category,
         date: blog.date,
+        isVisibility: blog.isVisibility,
         id: blog._id,
       }));
 
@@ -85,20 +100,14 @@ class AdminController_View {
     try {
       const { blog_id } = req.params;
 
-      const errorMsg = "Страница не найдена.";
-
       if (!mongoose.Types.ObjectId.isValid(blog_id)) {
         return res.status(404).json({ error: errorMsg });
       }
 
       const blogRead = await BlogsModel.findById(blog_id);
 
-      if (!blogRead || blogRead.isVisibility === false) {
-        return res.status(404).json({ error: errorMsg });
-      }
-
-      if (!blogRead.main_content || !blogRead.main_content.description) {
-        return res.status(404).json({ error: errorMsg });
+      if (!blogRead) {
+        return res.status(404).json({ error: "Страница не найдена." });
       }
 
       const blogData = {

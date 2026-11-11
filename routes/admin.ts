@@ -42,7 +42,7 @@ admin.get(
 );
 
 admin.get(
-  "/article/:article_type/list",
+  "/article/:article_type/:visibility/list",
   authenticateJWT,
   verifyPermissions("Admin"),
   AdminController_View.BlogListView,

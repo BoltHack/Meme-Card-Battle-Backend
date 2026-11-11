@@ -266,9 +266,6 @@ export const GAME = (socket: Socket) => {
       let winner_result = processMatchResults(player, opponent, true);
       let loser_result = processMatchResults(opponent, player, false);
 
-      console.log("winner result", winner_result);
-      console.log("loser result", loser_result);
-
       while (currentXP + winner_result.xpGained >= xpNeeded) {
         currentLVL += 1;
         xpNeeded = Math.round(Math.pow(currentLVL, 1.5) * 2500);
@@ -309,7 +306,7 @@ export const GAME = (socket: Socket) => {
         { new: true },
       );
 
-      if (leveledUp) {
+      if (leveledUp && currentLVL < 100) {
         console.log(`New lvl: ${currentLVL}!`);
       }
 
@@ -443,8 +440,6 @@ export const GAME = (socket: Socket) => {
           damage: finalDamage,
           text: `Игрок 1 нанёс урон в ${finalDamage} единиц.`,
         };
-
-        console.log("all_cards 1", all_cards);
       } else if (p2_damage > p1_damage) {
         let finalDamage = p2_damage;
         if (game_ubi[1].user_ult >= 100) {
@@ -454,8 +449,6 @@ export const GAME = (socket: Socket) => {
           game_ubi[1].user_ult += p2_damage / 2;
         }
         game_ubi[0].user_health -= finalDamage;
-
-        console.log("all_cards 2", all_cards);
 
         result = {
           status: "damage",
@@ -468,7 +461,7 @@ export const GAME = (socket: Socket) => {
           status: "draw",
           winnerId: null,
           damage: 0,
-          text: "Карты закончились. Абсолютная ничья по здоровью! (else)",
+          text: "Урон игроков был аннулирован. (else)",
         };
       }
 
@@ -495,108 +488,27 @@ export const GAME = (socket: Socket) => {
           text: "Победил Игрок 2.",
         };
       } else {
-        console.log("Раунд завершился ничьей.");
+        if (all_cards) {
+          console.log("Раунд завершился ничьей.");
+
+          result = {
+            status: "draw-end",
+            winnerId: null,
+            damage: 0,
+            text: "Урон игроков был аннулирован. (else)",
+          };
+
+          game_info.game_started = false;
+          await game_info.save();
+        }
       }
-
-      // if (p1_damage > p2_damage) {
-      //   let finalDamage = p1_damage;
-      //   if (game_ubi[0].user_ult >= 100) {
-      //     game_ubi[0].user_ult = 0;
-      //     finalDamage = p1_damage * 2;
-      //   } else {
-      //     game_ubi[0].user_ult += p1_damage / 2;
-      //   }
-      //   game_ubi[1].user_health -= finalDamage;
-
-      //   console.log("all_cards 1", all_cards);
-
-      //   if (
-      //     game_ubi[1].user_health < 1 ||
-      //     (game_ubi[0].user_health > game_ubi[1].user_health && all_cards)
-      //   ) {
-      //     await set_winner_func(player1.userId);
-      //     result = {
-      //       status: "win",
-      //       winnerId: player1.userId,
-      //       damage: finalDamage,
-      //       text: "Победил Игрок 1. (if)",
-      //     };
-      //   } else {
-      //     console.log("user 0 health", game_ubi[0].user_health);
-      //     console.log("user 1 health", game_ubi[1].user_health);
-      //     result = {
-      //       status: "damage",
-      //       winnerId: player1.userId,
-      //       damage: finalDamage,
-      //       text: `Игрок 1 нанёс урон в ${finalDamage} единиц. (if)`,
-      //     };
-      //   }
-      // } else if (p2_damage > p1_damage) {
-      //   let finalDamage = p2_damage;
-      //   if (game_ubi[1].user_ult >= 100) {
-      //     game_ubi[1].user_ult = 0;
-      //     finalDamage = p2_damage * 2;
-      //   } else {
-      //     game_ubi[1].user_ult += p2_damage / 2;
-      //   }
-      //   game_ubi[0].user_health -= finalDamage;
-
-      //   console.log("all_cards 2", all_cards);
-
-      //   if (
-      //     game_ubi[0].user_health < 1 ||
-      //     (game_ubi[1].user_health > game_ubi[0].user_health && all_cards)
-      //   ) {
-      //     await set_winner_func(player2.userId);
-      //     result = {
-      //       status: "win",
-      //       winnerId: player2.userId,
-      //       damage: finalDamage,
-      //       text: "Победил Игрок 2. (else if)",
-      //     };
-      //   } else {
-      //     console.log("user 0 health", game_ubi[0].user_health);
-      //     console.log("user 1 health", game_ubi[1].user_health);
-      //     result = {
-      //       status: "damage",
-      //       winnerId: player2.userId,
-      //       damage: finalDamage,
-      //       text: `Игрок 2 нанёс урон в ${finalDamage} единиц. (else if)`,
-      //     };
-      //   }
-      // } else {
-      //   if (all_cards) {
-      //     if (game_ubi[0].user_health > game_ubi[1].user_health) {
-      //       await set_winner_func(player1.userId);
-      //       result = {
-      //         status: "win",
-      //         winnerId: player1.userId,
-      //         damage: 0,
-      //         text: "Карты закончились. По здоровью победил Игрок 1. (else)",
-      //       };
-      //     } else if (game_ubi[1].user_health > game_ubi[0].user_health) {
-      //       await set_winner_func(player2.userId);
-      //       result = {
-      //         status: "win",
-      //         winnerId: player2.userId,
-      //         damage: 0,
-      //         text: "Карты закончились. По здоровью победил Игрок 2. (else)",
-      //       };
-      //     } else {
-      //       result = {
-      //         status: "draw",
-      //         winnerId: null,
-      //         damage: 0,
-      //         text: "Карты закончились. Абсолютная ничья по здоровью! (else)",
-      //       };
-      //     }
-      //   }
-      // }
 
       console.log("battle result", result);
 
-      game_info.markModified("users_battle_info");
-      await game_info.save();
+      if (result.status !== "draw" || result.status !== "draw-end") {
+        game_info.markModified("users_battle_info");
+        await game_info.save();
+      }
 
       const gameRoom = `game_room:${gameId}`;
 

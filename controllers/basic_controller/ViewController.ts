@@ -305,7 +305,9 @@ class ViewController {
   ) => {
     try {
       const { user_name } = req.params;
-      const user_info = await UsersModel.findOne({ requestName: user_name.toLowerCase() });
+      const user_info = await UsersModel.findOne({
+        requestName: user_name.toLowerCase(),
+      });
 
       if (!user_info) {
         return res.status(404).json({ error: "not found" });
