@@ -38,11 +38,11 @@ const UsersSchema = new Schema({
   isOnline: { type: Boolean, default: false },
   gameInfo: { type: String, default: "Default" },
 
-  settings: {
-    profile: {
-      aboutMe: { type: String, default: "" },
-    },
-  },
+  // settings: {
+  //   profile: {
+  //     aboutMe: { type: String, default: "" },
+  //   },
+  // },
 
   // friends: {
   //   list: [
