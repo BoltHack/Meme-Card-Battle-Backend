@@ -10,7 +10,7 @@ require("dotenv").config();
 
 const { ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET } = process.env;
 
-function parseMaxAge(duration: number) {
+function parseMaxAge(duration: string) {
   const unit = duration.slice(-1);
   const amount = parseInt(duration.slice(0, -1), 10);
 
@@ -104,17 +104,25 @@ class AuthController {
 
       res.cookie("access_token", accessToken, {
         httpOnly: true,
+        path: "/",
         // secure: true,
+        // sameSite: "none",
+        // secure: isProd,
+        // sameSite: isProd ? "strict" : "lax",
         secure: isProd,
-        sameSite: isProd ? "strict" : "lax",
+        sameSite: isProd ? ("none" as const) : ("lax" as const),
         maxAge: parseMaxAge("15m"),
       });
 
       res.cookie("refresh_token", refreshToken, {
         httpOnly: true,
+        path: "/",
         // secure: true,
+        // sameSite: "none",
+        // secure: isProd,
+        // sameSite: isProd ? "strict" : "lax",
         secure: isProd,
-        sameSite: isProd ? "strict" : "lax",
+        sameSite: isProd ? ("none" as const) : ("lax" as const),
         maxAge: parseMaxAge("10d"),
       });
 
@@ -164,11 +172,16 @@ class AuthController {
 
       if (!user) return;
 
+      const isProd = process.env.NODE_ENV === "production";
+
       let locale = req.cookies["locale"] || "ru";
 
       if (!req.cookies["locale"]) {
         res.cookie("locale", locale, {
           httpOnly: true,
+          path: "/",
+          secure: isProd,
+          sameSite: isProd ? ("none" as const) : ("lax" as const),
           maxAge: 10 * 365 * 24 * 60 * 60 * 1000,
         });
       }
@@ -213,21 +226,27 @@ class AuthController {
       // user.ip = ip;
       (await user.save()) as UserData;
 
-      const isProd = process.env.NODE_ENV === "production";
-
       res.cookie("access_token", accessToken, {
         httpOnly: true,
+        path: "/",
         // secure: true,
+        // sameSite: "none",
+        // secure: isProd,
+        // sameSite: isProd ? "strict" : "lax",
         secure: isProd,
-        sameSite: isProd ? "strict" : "lax",
+        sameSite: isProd ? ("none" as const) : ("lax" as const),
         maxAge: parseMaxAge("15m"),
       });
 
       res.cookie("refresh_token", refreshToken, {
         httpOnly: true,
+        path: "/",
         // secure: true,
+        // sameSite: "none",
+        // secure: isProd,
+        // sameSite: isProd ? "strict" : "lax",
         secure: isProd,
-        sameSite: isProd ? "strict" : "lax",
+        sameSite: isProd ? ("none" as const) : ("lax" as const),
         maxAge: parseMaxAge("10d"),
       });
 
@@ -253,7 +272,7 @@ class AuthController {
 
       const user = req.user as any;
       const userInfo = await UsersModel.findById(user.id);
-      
+
       if (!userInfo) {
         return res.status(404).json({ error: "Пользователь не найден." });
       }
@@ -321,14 +340,24 @@ class AuthController {
       console.log("auth hash", hash);
       userInfo.refreshTokenHash = hash;
 
+      const isProd = process.env.NODE_ENV === "production";
+
       res.cookie("access_token", accessToken, {
         httpOnly: true,
-        secure: false,
+        path: "/",
+        // secure: true,
+        // sameSite: "none",
+        secure: isProd,
+        sameSite: isProd ? ("none" as const) : ("lax" as const),
         maxAge: parseMaxAge("15m"),
       });
       res.cookie("refresh_token", refreshToken, {
         httpOnly: true,
-        secure: false,
+        path: "/",
+        // secure: true,
+        // sameSite: "none",
+        secure: isProd,
+        sameSite: isProd ? ("none" as const) : ("lax" as const),
         maxAge: parseMaxAge("10d"),
       });
 
@@ -362,10 +391,21 @@ class AuthController {
     next: NextFunction,
   ) => {
     try {
-      const user = req.user;
+      const user = req.user as any;
 
-      res.clearCookie("access_token");
-      res.clearCookie("refresh_token");
+      const isProd = process.env.NODE_ENV === "production";
+
+      const cookieOptions = {
+        httpOnly: true,
+        // secure: true,
+        // sameSite: "none" as const,
+        path: "/",
+        secure: isProd,
+        sameSite: isProd ? ("none" as const) : ("lax" as const),
+      };
+
+      res.clearCookie("access_token", cookieOptions);
+      res.clearCookie("refresh_token", cookieOptions);
 
       initLogger("info", `Пользователь ${user.name} вышел из аккаунта`);
       return res.status(200).json({ success: "Вы вышли из системы" });

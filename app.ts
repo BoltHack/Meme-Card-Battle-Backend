@@ -45,6 +45,7 @@ export const io = new Server(server, {
     allowedHeaders: [
       "Content-Type",
       "Authorization",
+      "api-access",
       "ngrok-skip-browser-warning",
       "skip_zrok_interstitial",
     ],
@@ -535,6 +536,9 @@ io.on("connection", async (socket) => {
 });
 
 app.use((req, res, next) => {
+  if (req.method === "OPTIONS") {
+    return next();
+  }
   if (req.path.startsWith("/uploads")) {
     return next();
   }
@@ -664,6 +668,7 @@ app.use(
     allowedHeaders: [
       "Content-Type",
       "Authorization",
+      "api-access",
       "ngrok-skip-browser-warning",
       "skip_zrok_interstitial",
     ],
