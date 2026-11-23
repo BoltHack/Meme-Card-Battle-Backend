@@ -13,6 +13,7 @@ import indexRouter from "./routes/index";
 import playRouter from "./routes/play";
 import authRouter from "./routes/auth";
 import adminRouter from "./routes/admin";
+import downloadRouter from "./routes/download";
 
 import cookiesData from "./app_data/cookiesData";
 
@@ -539,7 +540,7 @@ app.use((req, res, next) => {
   if (req.method === "OPTIONS") {
     return next();
   }
-  if (req.path.startsWith("/uploads")) {
+  if (req.path.startsWith("/uploads") || req.path.startsWith("/download")) {
     return next();
   }
   if (
@@ -705,6 +706,7 @@ app.use("/api", indexRouter);
 app.use("/play", playRouter);
 app.use("/auth", authRouter);
 app.use("/admin", adminRouter);
+app.use("/download", downloadRouter);
 
 async function launchApp() {
   try {

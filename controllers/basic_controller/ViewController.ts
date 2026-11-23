@@ -1067,6 +1067,33 @@ class ViewController {
       return res.status(500).json({ error: errorMessage });
     }
   };
+
+  static Download = async (
+    req: CustomRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      console.log("Запрос дошёл!");
+      
+      const filePath = path.join(
+        process.cwd(),
+        "download",
+        "meme-card-battle_0.1.0_x64-setup.exe",
+      );
+
+      res.download(filePath, "meme-card-battle_0.1.0_x64-setup.exe", (err) => {
+        if (err && !res.headersSent) {
+          res.status(404).send("Файл не найден");
+        }
+      });
+    } catch (err) {
+      console.error("Ошибка:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Неизвестная ошибка";
+      return res.status(500).json({ error: errorMessage });
+    }
+  };
 }
 
 export default ViewController;
