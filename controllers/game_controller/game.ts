@@ -383,7 +383,7 @@ export const GAME = (socket: Socket) => {
       const cards = await CardsModel.find({ _id: { $in: cardIds } });
       const cardsMap = new Map(cards.map((c) => [c._id.toString(), c]));
 
-      const players_damage_info = game_info.users_battle_info.map((ubi) => {
+      const players_damage_info = game_info.users_battle_info.map((ubi: any) => {
         const card_info = cardsMap.get(ubi.user_cards.select_card?.toString());
         return {
           userId: ubi._id.toString(),
@@ -505,7 +505,7 @@ export const GAME = (socket: Socket) => {
 
       console.log("battle result", result);
 
-      if (result.status !== "draw" || result.status !== "draw-end") {
+      if (result.status !== "draw" && result.status !== "draw-end") {
         game_info.markModified("users_battle_info");
         await game_info.save();
       }
