@@ -3,10 +3,7 @@ import path from "path";
 import cookieParser from "cookie-parser";
 import logger from "morgan";
 import cors from "cors";
-import http from "http";
 import fileUpload from "express-fileupload";
-// import axios from "axios";
-// import { Server, Socket } from "socket.io";
 
 import indexRouter from "./routes/index";
 import playRouter from "./routes/play";
@@ -16,19 +13,7 @@ import downloadRouter from "./routes/download";
 
 import cookiesData from "./app_data/cookiesData";
 
-// import { BOT_mode } from "./controllers/bots_controller/BOT_easyMode";
-// import { start } from "./config/db";
-
-
-// const serverPort = process.env.BACKEND_PORT;
-// const FrontendIP = process.env.FRONTEND_IP;
-
 const app = express();
-// const server = http.createServer(app);
-
-// import { initSockets } from "./sockets/io";
-
-// initSockets(server);
 
 app.use((req, res, next) => {
   if (req.method === "OPTIONS") {
@@ -174,10 +159,6 @@ app.use(logger("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
-// app.use('/uploads', (req, res, next) => {
-//     next();
-// }, express.static(path.join(__dirname, 'uploads')));
-
 app.use(
   fileUpload({
     // limits: { fileSize: 50 * 1024 * 1024 },
@@ -201,21 +182,5 @@ app.use("/play", playRouter);
 app.use("/auth", authRouter);
 app.use("/admin", adminRouter);
 app.use("/download", downloadRouter);
-
-// async function launchApp() {
-//   try {
-//     await start();
-
-//     server.listen(serverPort, () => {
-//       initLogger("info", `Сервер запущен на порту ${serverPort}`);
-//     });
-//   } catch (err) {
-//     console.log("Не удалось запустить сервер", err);
-//     initLogger("error", `Не удалось запустить сервер ${err}`);
-//     process.exit(1);
-//   }
-// }
-
-// launchApp();
 
 export default app;

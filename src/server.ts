@@ -11,10 +11,6 @@ const server = http.createServer(app);
 
 initSockets(server);
 
-// server.listen(serverPort, () => {
-//   console.log(`Сервер запущен на порту ${serverPort}`);
-// });
-
 async function launchApp() {
   try {
     await start();
