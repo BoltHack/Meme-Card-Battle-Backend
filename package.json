@@ -3,8 +3,8 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "start": "nodemon -r dotenv/config app.ts",
-    "dev": "ts-node-dev --respawn --transpile-only app.ts"
+    "start": "nodemon -r dotenv/config src/server.ts",
+    "dev": "ts-node-dev --respawn --transpile-only src/server.ts"
   },
   "dependencies": {
     "@types/cors": "^2.8.19",

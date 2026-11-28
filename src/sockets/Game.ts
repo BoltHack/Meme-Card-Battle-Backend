@@ -1,10 +1,10 @@
 import { Socket, Server } from "socket.io";
-import { io } from "../../app";
+// import { io } from "./Matchmaking";
 import mongoose from "mongoose";
 
-import UsersModel from "../../models/UsersModel";
-import CardsModel from "../../models/CardsModel";
-import GamesModel from "../../models/GamesModel";
+import UsersModel from "../models/UsersModel";
+import CardsModel from "../models/CardsModel";
+import GamesModel from "../models/GamesModel";
 
 interface SocketData extends Socket {
   playerId?: string;
@@ -19,6 +19,8 @@ interface PlayerData {
   myCards: any;
 }
 
+// let io: Server;
+
 function getRandomMoney(min: number, max: number) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
@@ -26,7 +28,7 @@ function getRandomMoney(min: number, max: number) {
 const gameClients: Record<string, string> = {};
 let timers: Record<number, number> = {};
 
-export const GAME = (socket: Socket) => {
+export const GAME = (io: Server, socket: Socket) => {
   console.log(`Пользователь ${socket.id} подключился к игре.`);
 
   socket.on("join_game", async (data: any) => {
@@ -383,14 +385,18 @@ export const GAME = (socket: Socket) => {
       const cards = await CardsModel.find({ _id: { $in: cardIds } });
       const cardsMap = new Map(cards.map((c) => [c._id.toString(), c]));
 
-      const players_damage_info = game_info.users_battle_info.map((ubi: any) => {
-        const card_info = cardsMap.get(ubi.user_cards.select_card?.toString());
-        return {
-          userId: ubi._id.toString(),
-          damage: card_info?.card_stats?.card_damage || 0,
-          protection: card_info?.card_stats?.card_protection || 0,
-        };
-      });
+      const players_damage_info = game_info.users_battle_info.map(
+        (ubi: any) => {
+          const card_info = cardsMap.get(
+            ubi.user_cards.select_card?.toString(),
+          );
+          return {
+            userId: ubi._id.toString(),
+            damage: card_info?.card_stats?.card_damage || 0,
+            protection: card_info?.card_stats?.card_protection || 0,
+          };
+        },
+      );
 
       if (!players_damage_info[0] || !players_damage_info[1]) {
         console.log("Ошибка: Недостаточно данных о игроках для расчета урона");
